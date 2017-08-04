@@ -12,6 +12,7 @@
     <packaging>jar</packaging>
 
 
+    <!--WSO2 Maven Repos-->
     <repositories>
         <repository>
             <id>wso2-nexus</id>
@@ -29,13 +30,17 @@
     <properties>
         <elasticsearch.version>5.4.3</elasticsearch.version>
         <log4j.version>1.1.1</log4j.version>
+        <fasterxml.jackson.version>2.6.1.wso2v1</fasterxml.jackson.version>
+        <fasterxml.jackson.databind.version>2.6.1.wso2v3</fasterxml.jackson.databind.version>
+        <junit.version>3.8.2</junit.version>
     </properties>
+
 
     <dependencies>
 
         <!--<dependency>-->
         <!--<groupId>org.wso2.carbon.mediation</groupId>-->
-        <!--<artifactId>org.wso2.carbon.das.data.publisher.util</artifactId>-->
+        <!--<artifactId>org.wso2.carbon.das.data.publish.util</artifactId>-->
         <!--<version>4.6.19</version>-->
         <!--</dependency>-->
         <dependency>
@@ -48,9 +53,31 @@
             <artifactId>org.wso2.carbon.das.messageflow.data.publisher</artifactId>
             <version>4.6.19</version>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.orbit.com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${fasterxml.jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.orbit.com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${fasterxml.jackson.databind.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+            <version>${junit.version}</version>
+        </dependency>
 
     </dependencies>
 
+    <!--Plugins to build as a OSGi bundle-->
     <!--<build>-->
         <!--<plugins>-->
             <!--<plugin>-->
@@ -68,14 +95,48 @@
                         <!--<Bundle-Name>${project.artifactId}</Bundle-Name>-->
                         <!--<Axis2Module>${project.artifactId}-${project.version}</Axis2Module>-->
                         <!--<Export-Package>-->
-                            <!--org.wso2.custom.elastic.publisher-->
+                            <!--org.wso2.custom.elastic.publish-->
                         <!--</Export-Package>-->
                         <!--<Import-Package>-->
-                            <!--org.wso2.carbon.das.messageflow.data.publisher.*;version="4.6.19"-->
+                            <!--org.wso2.carbon.das.messageflow.data.publish.*;version="4.6.19"-->
                         <!--</Import-Package>-->
                         <!--<DynamicImport-Package>*</DynamicImport-Package>-->
                     <!--</instructions>-->
                 <!--</configuration>-->
+            <!--</plugin>-->
+        <!--</plugins>-->
+    <!--</build>-->
+
+    <!--Build plugin to include and exclude dependencies packed in jar-->
+    <!--<build>-->
+        <!--<plugins>-->
+            <!--<plugin>-->
+                <!--<groupId>org.apache.maven.plugins</groupId>-->
+                <!--<artifactId>maven-shade-plugin</artifactId>-->
+                <!--<version>3.0.0</version>-->
+                <!--<executions>-->
+                    <!--<execution>-->
+                        <!--<phase>package</phase>-->
+                        <!--<goals>-->
+                            <!--<goal>shade</goal>-->
+                        <!--</goals>-->
+                        <!--<configuration>-->
+                            <!--<artifactSet>-->
+                                <!--<excludes>-->
+                                    <!--<exclude>org.wso2.carbon.mediation:org.wso2.carbon.das.messageflow.data.publisher</exclude>-->
+                                    <!--<exclude>junit:junit</exclude>-->
+                                    <!--<exclude>org.wso2.orbit.com.fasterxml.jackson.core:jackson-core</exclude>-->
+                                    <!--<exclude>org.wso2.orbit.com.fasterxml.jackson.core:jackson-databind</exclude>-->
+                                    <!--<exclude>commons-logging:commons-logging</exclude>-->
+                                <!--</excludes>-->
+                                <!--&lt;!&ndash;<includes>&ndash;&gt;-->
+                                    <!--&lt;!&ndash;<include>org.elasticsearch.client:transport:jar:</include>&ndash;&gt;-->
+                                <!--&lt;!&ndash;</includes>&ndash;&gt;-->
+                            <!--</artifactSet>-->
+                            <!--&lt;!&ndash;<minimizeJar>true</minimizeJar>&ndash;&gt;-->
+                        <!--</configuration>-->
+                    <!--</execution>-->
+                <!--</executions>-->
             <!--</plugin>-->
         <!--</plugins>-->
     <!--</build>-->
