@@ -8,8 +8,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.wso2.carbon.das.data.publisher.util.PublisherUtil;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Map;
+import java.util.SimpleTimeZone;
 
 public class ElasticStatisticsPublisher {
 
@@ -25,6 +29,19 @@ public class ElasticStatisticsPublisher {
 
         mapping.put("type",publishingFlow.getEvent(0).getComponentType());
         mapping.put("name",publishingFlow.getEvent(0).getComponentName());
+
+        long time = publishingFlow.getEvent(0).getStartTime();
+        Date date = new Date(time);
+//        log.info(date.toString());
+//        yyyyMMdd'T'HHmmss.SSSZ
+        DateFormat dateFormatQuery = new SimpleDateFormat("yyyy-MM-dd");
+        String dateForQuery = dateFormatQuery.format(date);
+
+        DateFormat dateFormatQueryTime = new SimpleDateFormat("HH:mm:ss.SSS");
+        String timeForQuery = dateFormatQueryTime.format(date);
+
+        String timeStampToQuery = dateForQuery + "T" + timeForQuery + "Z";
+        log.info("Timestamp : " + timeStampToQuery);
 
         boolean success = true;
 
