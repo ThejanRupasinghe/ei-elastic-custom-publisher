@@ -2,27 +2,33 @@ package org.wso2.custom.elastic.publisher.publish;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingEvent;
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingFlow;
+import org.elasticsearch.client.transport.NoNodeAvailableException;
+import org.wso2.carbon.das.data.publisher.util.PublisherUtil;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.wso2.carbon.das.data.publisher.util.PublisherUtil;
+
+import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.client.transport.TransportClient;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.SimpleTimeZone;
 
 public class ElasticStatisticsPublisher {
 
     private static final Log log = LogFactory.getLog(ElasticStatisticsPublisher.class);
 
 
-    public static void process( PublishingFlow publishingFlow ) {
+    public static void process( PublishingFlow publishingFlow, TransportClient client ) {
 
-        Map<String, Object> mapping = publishingFlow.getObjectAsMap();
+        Map<String, Object> mapping = new HashMap<String, Object>();
 
         mapping.put("flowid", publishingFlow.getMessageFlowId());
         mapping.put("host", PublisherUtil.getHostAddress());
@@ -32,16 +38,15 @@ public class ElasticStatisticsPublisher {
 
         long time = publishingFlow.getEvent(0).getStartTime();
         Date date = new Date(time);
-//        log.info(date.toString());
-//        yyyyMMdd'T'HHmmss.SSSZ
-        DateFormat dateFormatQuery = new SimpleDateFormat("yyyy-MM-dd");
-        String dateForQuery = dateFormatQuery.format(date);
 
-        DateFormat dateFormatQueryTime = new SimpleDateFormat("HH:mm:ss.SSS");
-        String timeForQuery = dateFormatQueryTime.format(date);
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        String formattedDate = dateFormat.format(date);
 
-        String timeStampToQuery = dateForQuery + "T" + timeForQuery + "Z";
-        log.info("Timestamp : " + timeStampToQuery);
+        DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss.SSS");
+        String formattedTime = timeFormat.format(date);
+
+        String timestampElastic = formattedDate + "T" + formattedTime + "Z";
+        mapping.put("@timestamp",timestampElastic);
 
         boolean success = true;
 
@@ -66,9 +71,46 @@ public class ElasticStatisticsPublisher {
         log.info("Type : " + mapping.get("type"));
         log.info("Name : " + mapping.get("name"));
         log.info("Success : " + mapping.get("success"));
+        log.info("Timestamp : " + mapping.get("@timestamp"));
 
 
         ObjectMapper objectMapper = new ObjectMapper();
+
+        try {
+
+            String jsonString = objectMapper.writeValueAsString(mapping);
+
+            publish(jsonString, client);
+
+        } catch (JsonProcessingException e) {
+
+            e.printStackTrace();
+            log.error("Error in converting to json string " + e);
+
+        }
+
+
+    }
+
+    private static boolean publish ( String jsonToSend, TransportClient client ) {
+
+        log.info(jsonToSend);
+
+        try {
+
+            IndexResponse response = client.prepareIndex("twitter", "tweet")
+                    .setSource(jsonToSend)
+                    .get();
+
+            return true;
+
+        } catch (NoNodeAvailableException e) {
+
+            log.error("No available Elasticsearch Nodes to connect. Please give correct configurations and run Elasticsearch.");
+
+            return false;
+
+        }
 
     }
 }

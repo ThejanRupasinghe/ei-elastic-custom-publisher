@@ -3,16 +3,12 @@ package org.wso2.custom.elastic.publisher.observer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-
-import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
-
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingFlow;
-import org.wso2.carbon.das.messageflow.data.publisher.internal.MessageFlowDataPublisherDataHolder;
 import org.wso2.carbon.das.messageflow.data.publisher.observer.MessageFlowObserver;
 import org.wso2.custom.elastic.publisher.publish.ElasticStatisticsPublisher;
 
@@ -57,33 +53,24 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver{
         if (log.isDebugEnabled()) {
             log.debug("Shutting down the mediation statistics observer of Elasticsearch");
         }
+
     }
 
     public void updateStatistics(PublishingFlow publishingFlow) {
-        log.info("update starts");
+//        log.info("update starts");
 
-//        String json = "{" +
-//                "\"user\":\"kimchy\"," +
-//                "\"postDate\":\"2013-01-30\"," +
-//                "\"message\":\"trying out Elasticsearch\"" +
-//                "}";
-//
-//        IndexResponse response = client.prepareIndex("twitter", "tweet")
-//                .setSource(json)
-//                .get();
 
         try {
 
-            // No need to publish if there's no stream
-//            if (MessageFlowDataPublisherDataHolder.getInstance().getPublisherService().getStreamIds().size() > 0) {
-                ElasticStatisticsPublisher.process(publishingFlow);
-//            }
+            ElasticStatisticsPublisher.process ( publishingFlow, client);
 
         } catch (Exception e) {
+
             log.error("Failed to update statics from Elasticsearch publisher", e);
+
         }
 
-        log.info("update finishes");
+//        log.info("update finishes");
 
     }
 
