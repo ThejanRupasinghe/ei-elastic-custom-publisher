@@ -9,8 +9,11 @@ import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingFlow;
+import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.das.messageflow.data.publisher.observer.MessageFlowObserver;
+
 import org.wso2.custom.elastic.publisher.publish.ElasticStatisticsPublisher;
+import org.wso2.custom.elastic.publisher.util.ElasticObserverConstants;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -25,21 +28,32 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver{
     // Defines elasticsearch Transport Client as client
     private TransportClient client = null;
 
+    ServerConfiguration serverConf = ServerConfiguration.getInstance();
+
 
     public ElasticMediationFlowObserver() {
 
-        settings = Settings.builder().put("cluster.name","elasticsearch").build();
+        String clusterName = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_CLUSTER_NAME);
+        String host = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_HOST);
+        String portString = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_PORT);
+
+        settings = Settings.builder().put("cluster.name",clusterName).build();
 
         client = new PreBuiltTransportClient(settings);
 
         try {
 
-            client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("localhost"),9300));
+            int port = Integer.parseInt(portString);
+
+            client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
 
         } catch ( UnknownHostException e ) {
 
             log.error("Unknown Elasticsearch Host");
 
+        } catch ( NumberFormatException e ) {
+
+            log.error("Invalid port number");
         }
 
     }
