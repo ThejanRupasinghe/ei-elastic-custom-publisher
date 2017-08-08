@@ -51,10 +51,6 @@ public class ElasticStatisticsPublisher {
         ArrayList<PublishingEvent> events = publishingFlow.getEvents();
 
         for ( PublishingEvent event:events ) {
-//            log.info(event.getComponentType());
-//            log.info(event.getComponentName());
-//            log.info(event.getFaultCount());
-//            log.info(event.getEntryPoint());
 
             if( event.getFaultCount()>0 ){
                 success = false;
@@ -64,13 +60,16 @@ public class ElasticStatisticsPublisher {
 
         mapping.put("success",success);
 
-        log.info("FlowID : " + mapping.get("flowid"));
-        log.info("Host : " + mapping.get("host"));
-        log.info("Type : " + mapping.get("type"));
-        log.info("Name : " + mapping.get("name"));
-        log.info("Success : " + mapping.get("success"));
-        log.info("Timestamp : " + mapping.get("@timestamp"));
+        if ( log.isDebugEnabled() ) {
 
+            log.debug("FlowID : " + mapping.get("flowid"));
+            log.debug("Host : " + mapping.get("host"));
+            log.debug("Type : " + mapping.get("type"));
+            log.debug("Name : " + mapping.get("name"));
+            log.debug("Success : " + mapping.get("success"));
+            log.debug("Timestamp : " + mapping.get("@timestamp"));
+
+        }
 
         ObjectMapper objectMapper = new ObjectMapper();
 
@@ -82,7 +81,7 @@ public class ElasticStatisticsPublisher {
 
         } catch (JsonProcessingException e) {
 
-            e.printStackTrace();
+//            e.printStackTrace();
             log.error("Error in converting to json string " + e);
 
         }
@@ -92,7 +91,7 @@ public class ElasticStatisticsPublisher {
 
     private static boolean publish ( String jsonToSend, TransportClient client ) {
 
-        log.info(jsonToSend);
+//        log.info(jsonToSend);
 
         try {
 
