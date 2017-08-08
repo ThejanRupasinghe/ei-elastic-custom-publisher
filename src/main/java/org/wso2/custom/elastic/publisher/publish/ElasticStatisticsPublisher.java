@@ -16,10 +16,7 @@ import org.elasticsearch.client.transport.TransportClient;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class ElasticStatisticsPublisher {
 
@@ -43,6 +40,7 @@ public class ElasticStatisticsPublisher {
         String formattedDate = dateFormat.format(date);
 
         DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss.SSS");
+        timeFormat.setTimeZone(new SimpleTimeZone(SimpleTimeZone.UTC_TIME, "UTC"));
         String formattedTime = timeFormat.format(date);
 
         String timestampElastic = formattedDate + "T" + formattedTime + "Z";
@@ -98,7 +96,7 @@ public class ElasticStatisticsPublisher {
 
         try {
 
-            IndexResponse response = client.prepareIndex("twitter", "tweet")
+            IndexResponse response = client.prepareIndex("test_eidata", "data")
                     .setSource(jsonToSend)
                     .get();
 
