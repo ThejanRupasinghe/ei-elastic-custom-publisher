@@ -70,7 +70,7 @@
     <orderEntry type="library" name="Maven: org.elasticsearch.plugin:lang-mustache-client:5.4.3" level="project" />
     <orderEntry type="library" name="Maven: com.github.spullara.mustache.java:compiler:0.9.3" level="project" />
     <orderEntry type="library" name="Maven: org.elasticsearch.plugin:percolator-client:5.4.3" level="project" />
-    <orderEntry type="library" name="Maven: org.wso2.carbon.mediation:org.wso2.carbon.das.messageflow.data.publisher:4.6.19" level="project" />
+    <orderEntry type="library" name="Maven: org.wso2.carbon.mediation:org.wso2.carbon.das.messageflow.data.publisher:4.6.21-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: org.apache.synapse:synapse-core:2.1.7-wso2v17-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: org.wso2.securevault:org.wso2.securevault:1.0.0" level="project" />
     <orderEntry type="library" name="Maven: org.apache.ws.commons.axiom:axiom-api:1.2.11" level="project" />
