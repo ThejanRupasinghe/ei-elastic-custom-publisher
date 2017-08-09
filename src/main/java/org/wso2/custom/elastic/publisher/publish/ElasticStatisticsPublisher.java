@@ -23,15 +23,15 @@ public class ElasticStatisticsPublisher {
     private static final Log log = LogFactory.getLog(ElasticStatisticsPublisher.class);
 
 
-    public static void process( PublishingFlow publishingFlow, TransportClient client ) {
+    public static void process(PublishingFlow publishingFlow, TransportClient client) {
 
         Map<String, Object> mapping = new HashMap<String, Object>();
 
         mapping.put("flowid", publishingFlow.getMessageFlowId());
         mapping.put("host", PublisherUtil.getHostAddress());
 
-        mapping.put("type",publishingFlow.getEvent(0).getComponentType());
-        mapping.put("name",publishingFlow.getEvent(0).getComponentName());
+        mapping.put("type", publishingFlow.getEvent(0).getComponentType());
+        mapping.put("name", publishingFlow.getEvent(0).getComponentName());
 
         long time = publishingFlow.getEvent(0).getStartTime();
         Date date = new Date(time);
@@ -44,23 +44,23 @@ public class ElasticStatisticsPublisher {
         String formattedTime = timeFormat.format(date);
 
         String timestampElastic = formattedDate + "T" + formattedTime + "Z";
-        mapping.put("@timestamp",timestampElastic);
+        mapping.put("@timestamp", timestampElastic);
 
         boolean success = true;
 
         ArrayList<PublishingEvent> events = publishingFlow.getEvents();
 
-        for ( PublishingEvent event:events ) {
+        for (PublishingEvent event : events) {
 
-            if( event.getFaultCount()>0 ){
+            if (event.getFaultCount() > 0) {
                 success = false;
                 break;
             }
         }
 
-        mapping.put("success",success);
+        mapping.put("success", success);
 
-        if ( log.isDebugEnabled() ) {
+        if (log.isDebugEnabled()) {
 
             log.debug("FlowID : " + mapping.get("flowid"));
             log.debug("Host : " + mapping.get("host"));
@@ -89,7 +89,7 @@ public class ElasticStatisticsPublisher {
 
     }
 
-    private static boolean publish ( String jsonToSend, TransportClient client ) {
+    private static boolean publish(String jsonToSend, TransportClient client) {
 
 //        log.info(jsonToSend);
 

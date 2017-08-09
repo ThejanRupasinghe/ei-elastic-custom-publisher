@@ -18,7 +18,7 @@ import org.wso2.custom.elastic.publisher.util.ElasticObserverConstants;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-public class ElasticMediationFlowObserver implements MessageFlowObserver{
+public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
     private static final Log log = LogFactory.getLog(ElasticMediationFlowObserver.class);
 
@@ -37,7 +37,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver{
         String host = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_HOST);
         String portString = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_PORT);
 
-        settings = Settings.builder().put("cluster.name",clusterName).build();
+        settings = Settings.builder().put("cluster.name", clusterName).build();
 
         client = new PreBuiltTransportClient(settings);
 
@@ -47,11 +47,11 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver{
 
             client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
 
-        } catch ( UnknownHostException e ) {
+        } catch (UnknownHostException e) {
 
             log.error("Unknown Elasticsearch Host");
 
-        } catch ( NumberFormatException e ) {
+        } catch (NumberFormatException e) {
 
             log.error("Invalid port number");
         }
@@ -60,7 +60,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver{
 
     public void destroy() {
 
-        if( client != null ) {
+        if (client != null) {
             client.close();
         }
 
@@ -76,7 +76,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver{
 
         try {
 
-            ElasticStatisticsPublisher.process ( publishingFlow, client);
+            ElasticStatisticsPublisher.process(publishingFlow, client);
 
         } catch (Exception e) {
 
