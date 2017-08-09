@@ -22,22 +22,22 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
     private static final Log log = LogFactory.getLog(ElasticMediationFlowObserver.class);
 
-    // Elasticsearch settings object
-    private Settings settings;
-
     // Defines elasticsearch Transport Client as client
     private TransportClient client = null;
 
-    ServerConfiguration serverConf = ServerConfiguration.getInstance();
-
-
+    /**
+     * Instantiates the TransportClient as this class is instantiates
+     */
     public ElasticMediationFlowObserver() {
+
+        ServerConfiguration serverConf = ServerConfiguration.getInstance();
 
         String clusterName = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_CLUSTER_NAME);
         String host = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_HOST);
         String portString = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_PORT);
 
-        settings = Settings.builder().put("cluster.name", clusterName).build();
+        // Elasticsearch settings object
+        Settings settings = Settings.builder().put("cluster.name", clusterName).build();
 
         client = new PreBuiltTransportClient(settings);
 
@@ -58,6 +58,9 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
     }
 
+    /**
+     * TransportClient gets closed
+     */
     public void destroy() {
 
         if (client != null) {
@@ -70,21 +73,27 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
     }
 
+    /**
+     * Method is called when this observer is notified.
+     * Calls to process the the publishingFlow and pass the processed json to publish.
+     *
+     * @param publishingFlow PublishingFlow object is passed when notified.
+     */
     public void updateStatistics(PublishingFlow publishingFlow) {
-//        log.info("update starts");
-
 
         try {
 
-            ElasticStatisticsPublisher.process(publishingFlow, client);
+            String jsonToPublish = ElasticStatisticsPublisher.process(publishingFlow);
+
+            if (jsonToPublish != null) {
+                ElasticStatisticsPublisher.publish(jsonToPublish, client);
+            }
 
         } catch (Exception e) {
 
             log.error("Failed to update statics from Elasticsearch publisher", e);
 
         }
-
-//        log.info("update finishes");
 
     }
 
