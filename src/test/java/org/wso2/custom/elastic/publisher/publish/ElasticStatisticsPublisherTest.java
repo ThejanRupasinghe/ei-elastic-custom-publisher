@@ -7,9 +7,11 @@ import org.apache.synapse.aspects.flow.statistics.publishing.PublishingEvent;
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingFlow;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.wso2.carbon.das.data.publisher.util.PublisherUtil;
 
+import java.net.InetAddress;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -76,9 +78,11 @@ public class ElasticStatisticsPublisherTest extends TestCase {
 
     public void testPublish() throws Exception {
 
-        Settings settings = Settings.builder().put("cluster.name", "localhost").build();
+        Settings settings = Settings.builder().put("cluster.name", "elasticsearch").build();
 
         TransportClient client = new PreBuiltTransportClient(settings);
+        client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("localhost"), 9300));
+
 
         String jsonToPublish = "{\"@timestamp\":\"2017-08-10T08:26:28.075Z\",\"success\":true,\"host\":\"172.17.0.1\",\"name\":\"TestProxy\",\"type\":\"Proxy\",\"flowid\":\"abcd1234\"}";
 
