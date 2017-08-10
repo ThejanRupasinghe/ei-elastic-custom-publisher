@@ -61,6 +61,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     /**
      * TransportClient gets closed
      */
+    @Override
     public void destroy() {
 
         if (client != null) {
@@ -79,6 +80,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
      *
      * @param publishingFlow PublishingFlow object is passed when notified.
      */
+    @Override
     public void updateStatistics(PublishingFlow publishingFlow) {
 
         try {

@@ -7,6 +7,18 @@
     <groupId>org.wso2.ei</groupId>
     <artifactId>org.wso2.custom.elastic.publisher</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
     <name>Elasticsearch - Message Flow Data Publisher</name>
     <description>Custom statistic observer for WSO2 EI to publish statistic to Elasticsearch</description>
     <packaging>jar</packaging>
@@ -68,6 +80,18 @@
             <artifactId>junit</artifactId>
             <scope>test</scope>
             <version>${junit.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <scope>test</scope>
+            <version>2.8.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <scope>test</scope>
+            <version>2.8.2</version>
         </dependency>
 
     </dependencies>
