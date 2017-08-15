@@ -17,6 +17,7 @@ import org.wso2.custom.elastic.publisher.util.ElasticObserverConstants;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 
 public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
@@ -37,7 +38,9 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         String portString = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_PORT);
 
         // Elasticsearch settings object
-        Settings settings = Settings.builder().put("cluster.name", clusterName).build();
+        Settings settings = Settings.builder()
+                .put("cluster.name", clusterName)
+                .build();
 
         client = new PreBuiltTransportClient(settings);
 
@@ -85,10 +88,10 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
         try {
 
-            String jsonToPublish = ElasticStatisticsPublisher.process(publishingFlow);
+            ArrayList<String> jsonsToPublish = ElasticStatisticsPublisher.process(publishingFlow);
 
-            if (jsonToPublish != null) {
-                ElasticStatisticsPublisher.publish(jsonToPublish, client);
+            if (jsonsToPublish != null) {
+                ElasticStatisticsPublisher.publish(jsonsToPublish, client);
             }
 
         } catch (Exception e) {

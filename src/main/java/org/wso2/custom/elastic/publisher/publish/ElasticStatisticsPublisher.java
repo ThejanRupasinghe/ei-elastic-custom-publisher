@@ -5,6 +5,8 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingEvent;
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingFlow;
+import org.elasticsearch.action.bulk.BulkRequestBuilder;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.client.transport.NoNodeAvailableException;
 import org.wso2.carbon.das.data.publisher.util.PublisherUtil;
 
@@ -28,66 +30,76 @@ public class ElasticStatisticsPublisher {
      * @param publishingFlow PublishingFlow object which contains the publishing events
      * @return if success processed json, if exception null
      */
-    public static String process(PublishingFlow publishingFlow) {
+    public static ArrayList<String> process(PublishingFlow publishingFlow) {
 
-        Map<String, Object> mapping = new HashMap<String, Object>();
+        ArrayList<Map<String, Object>> allMappings = new ArrayList<Map<String, Object>>();
 
-        // Adds message flow id and host
-        mapping.put("flowid", publishingFlow.getMessageFlowId());
-        mapping.put("host", PublisherUtil.getHostAddress());
+        // Takes message flow id and host
+        String flowid = publishingFlow.getMessageFlowId();
+        String host = PublisherUtil.getHostAddress();
 
-        // First event contains the type and the name of the service
-        mapping.put("type", publishingFlow.getEvent(0).getComponentType());
-        mapping.put("name", publishingFlow.getEvent(0).getComponentName());
-
-        // Takes start time of the first event as the timestamp
-        long time = publishingFlow.getEvent(0).getStartTime();
-        Date date = new Date(time);
-
-        // Formatting timestamp according to Elasticsearch
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        String formattedDate = dateFormat.format(date);
-
-        DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss.SSS");
-        timeFormat.setTimeZone(new SimpleTimeZone(SimpleTimeZone.UTC_TIME, "UTC"));
-        String formattedTime = timeFormat.format(date);
-
-        String timestampElastic = formattedDate + "T" + formattedTime + "Z";
-        mapping.put("@timestamp", timestampElastic);
-
-        // Whether the message flow is success or not
-        boolean success = true;
+        // Takes main message details
+        /*
+        Map<String, Object> mappingApiProxy = new HashMap<String, Object>();
+        mappingApiProxy.put("flowid", flowid);
+        mappingApiProxy.put("host", host);
+        mappingApiProxy.put("type", publishingFlow.getEvent(0).getComponentType());
+        mappingApiProxy.put("name", publishingFlow.getEvent(0).getComponentName());
+        mappingApiProxy.put("@timestamp", getFormattedDate(publishingFlow.getEvent(0).getStartTime()));
+        if (publishingFlow.getEvent(0).getFaultCount() > 0) {
+            mappingApiProxy.put("success", false);
+        } else {
+            mappingApiProxy.put("success", true);
+        }
+        allMappings.add(mappingApiProxy);
+        */
 
         ArrayList<PublishingEvent> events = publishingFlow.getEvents();
 
-        // If any event contains a fault success=false
+
         for (PublishingEvent event : events) {
 
-            if (event.getFaultCount() > 0) {
-                success = false;
-                break;
+            String componentType = event.getComponentType();
+            String componentName = event.getComponentName();
+            boolean success = true;
+
+            // TODO: 8/15/17 how to consider inbound endpoints
+            if (componentType.equals("Sequence") || componentType.equals("Endpoint") || componentType.equals("API") || componentType.equals("Proxy Service")) {
+                Map<String, Object> mapping = new HashMap<String, Object>();
+
+                if (!(componentName.equals("API_INSEQ") || componentName.equals("API_OUTSEQ") ||
+                        componentName.equals("PROXY_INSEQ") || componentName.equals("PROXY_OUTSEQ") ||
+                        componentName.equals("AnonymousEndpoint") )) {
+
+                    mapping.put("type", componentType);
+                    mapping.put("name", componentName);
+                    mapping.put("flowid", flowid);
+                    mapping.put("host", host);
+                    mapping.put("@timestamp", getFormattedDate(event.getStartTime()));
+                    if (event.getFaultCount() > 0) {
+                        success = false;
+                    }
+                    mapping.put("success", success);
+                    allMappings.add(mapping);
+                }
+
             }
         }
 
-        mapping.put("success", success);
-
-        if (log.isDebugEnabled()) {
-            log.debug("FlowID : " + mapping.get("flowid"));
-            log.debug("Host : " + mapping.get("host"));
-            log.debug("Type : " + mapping.get("type"));
-            log.debug("Name : " + mapping.get("name"));
-            log.debug("Success : " + mapping.get("success"));
-            log.debug("Timestamp : " + mapping.get("@timestamp"));
-        }
 
         ObjectMapper objectMapper = new ObjectMapper();
+        ArrayList<String> jsonStringList = new ArrayList<String>();
+
 
         try {
 
-            // Converts Map to json string
-            String jsonString = objectMapper.writeValueAsString(mapping);
+            for (Map<String, Object> map : allMappings) {
 
-            return jsonString;
+                jsonStringList.add(objectMapper.writeValueAsString(map));
+
+            }
+
+            return jsonStringList;
 
         } catch (JsonProcessingException e) {
 
@@ -102,29 +114,31 @@ public class ElasticStatisticsPublisher {
     /**
      * Publishes the simplified json to Elasticsearch using the Transport client
      *
-     * @param jsonToSend json string to be published to Elasticsearch
-     * @param client     elasticsearch Transport client
+     * @param jsonsToSend json string to be published to Elasticsearch
+     * @param client      elasticsearch Transport client
      * @return ID of the indexed document if success, null if failed
      */
-    public static String publish(String jsonToSend, TransportClient client) {
-
-        if (log.isDebugEnabled()) {
-            log.info("Sending json to Elasticsearch : " + jsonToSend);
-        }
-
-        log.info(jsonToSend);
+    public static String publish(ArrayList<String> jsonsToSend, TransportClient client) {
 
         try {
 
-            // publishing to Elasticsearch
-            IndexResponse response = client.prepareIndex("test_eidata", "data")
-                    .setSource(jsonToSend)
-                    .get();
+            if (client.connectedNodes().isEmpty()) {
+                log.info("NO NODES");
+            }
 
-            log.info(response.getId());
+            BulkRequestBuilder bulkRequest = client.prepareBulk();
+            for (String jsonString : jsonsToSend) {
+                bulkRequest.add(client.prepareIndex("test_eidata", "data")
+                        .setSource(jsonString)
+                );
+                log.info(jsonString);
+            }
 
-            // id of the indexed document
-            return response.getId();
+            BulkResponse bulkResponse = bulkRequest.get();
+            if (bulkResponse.hasFailures()) {
+                log.info("No Failures");
+            }
+            return null;
 
         } catch (NoNodeAvailableException e) {
 
@@ -134,5 +148,22 @@ public class ElasticStatisticsPublisher {
 
         }
 
+    }
+
+    private static String getFormattedDate(long time) {
+
+        Date date = new Date(time);
+
+        // Formatting timestamp according to Elasticsearch
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        String formattedDate = dateFormat.format(date);
+
+        DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss.SSS");
+//        timeFormat.setTimeZone(new SimpleTimeZone(SimpleTimeZone.UTC_TIME, "UTC"));
+        String formattedTime = timeFormat.format(date);
+
+        String timestampElastic = formattedDate + "T" + formattedTime + "Z";
+
+        return timestampElastic;
     }
 }
