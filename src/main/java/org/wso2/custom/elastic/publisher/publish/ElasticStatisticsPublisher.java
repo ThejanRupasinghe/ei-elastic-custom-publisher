@@ -10,9 +10,6 @@ import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.client.transport.NoNodeAvailableException;
 import org.wso2.carbon.das.data.publisher.util.PublisherUtil;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.elasticsearch.client.transport.TransportClient;
 
 import java.text.DateFormat;
@@ -24,7 +21,8 @@ public class ElasticStatisticsPublisher {
 
     private static final Log log = LogFactory.getLog(ElasticStatisticsPublisher.class);
 
-    public static Queue<Map<String, Object>> all = new ConcurrentLinkedQueue<Map<String, Object>>();
+    // Queue to store all the Maps of data to be converted to jsons
+    public static Queue<Map<String, Object>> allMappingsQueue = new ConcurrentLinkedQueue<Map<String, Object>>();
 
 
     /**
@@ -33,9 +31,7 @@ public class ElasticStatisticsPublisher {
      * @param publishingFlow PublishingFlow object which contains the publishing events
      * @return if success processed json, if exception null
      */
-    public static ArrayList<String> process(PublishingFlow publishingFlow) {
-
-        ArrayList<Map<String, Object>> allMappings = new ArrayList<Map<String, Object>>();
+    public static void process(PublishingFlow publishingFlow) {
 
         // Takes message flow id and host
         String flowid = publishingFlow.getMessageFlowId();
@@ -47,13 +43,16 @@ public class ElasticStatisticsPublisher {
 
             String componentType = event.getComponentType();
             String componentName = event.getComponentName();
-            boolean success = true;
 
+            // Checks each event for one of these five services
             if (componentType.equals("Sequence") || componentType.equals("Endpoint") ||
                     componentType.equals("API") || componentType.equals("Proxy Service") ||
                     componentType.equals("Inbound EndPoint")) {
+
+                // Map to store details of the event
                 Map<String, Object> mapping = new HashMap<String, Object>();
 
+                // Ignore events with theses ComponentNames
                 if (!(componentName.equals("API_INSEQ") || componentName.equals("API_OUTSEQ") ||
                         componentName.equals("PROXY_INSEQ") || componentName.equals("PROXY_OUTSEQ") ||
                         componentName.equals("AnonymousEndpoint") )) {
@@ -63,56 +62,32 @@ public class ElasticStatisticsPublisher {
                     mapping.put("flowid", flowid);
                     mapping.put("host", host);
                     mapping.put("@timestamp", getFormattedDate(event.getStartTime()));
+
+                    // If there is a fault count, the event is not success
                     if (event.getFaultCount() > 0) {
-                        success = false;
+                        mapping.put("success", false);
+                    } else {
+                        mapping.put("success", true);
                     }
-                    mapping.put("success", success);
-                    allMappings.add(mapping);
-                    all.add(mapping);
+
+                    // Enqueue the Map to the queue
+                    allMappingsQueue.add(mapping);
                 }
 
             }
         }
 
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        ArrayList<String> jsonStringList = new ArrayList<String>();
-
-
-        try {
-
-            for (Map<String, Object> map : allMappings) {
-
-                jsonStringList.add(objectMapper.writeValueAsString(map));
-
-            }
-
-            return jsonStringList;
-
-        } catch (JsonProcessingException e) {
-
-            log.error("Error in converting to json string " + e);
-
-            return null;
-
-        }
-
     }
 
     /**
-     * Publishes the simplified json to Elasticsearch using the Transport client
+     * Publishes the array list of simplified jsons to Elasticsearch using the Transport client
      *
-     * @param jsonsToSend json string to be published to Elasticsearch
+     * @param jsonsToSend array list of json strings to be published to Elasticsearch
      * @param client      elasticsearch Transport client
-     * @return ID of the indexed document if success, null if failed
      */
-    public static String publish(ArrayList<String> jsonsToSend, TransportClient client) {
+    public static void publish(ArrayList<String> jsonsToSend, TransportClient client) {
 
         try {
-
-            if (client.connectedNodes().isEmpty()) {
-                log.info("NO NODES");
-            }
 
             BulkRequestBuilder bulkRequest = client.prepareBulk();
             for (String jsonString : jsonsToSend) {
@@ -123,26 +98,30 @@ public class ElasticStatisticsPublisher {
             }
 
             BulkResponse bulkResponse = bulkRequest.get();
+            /*
             if (bulkResponse.hasFailures()) {
-                log.info("No Failures");
+                log.info("Failures");
             }
-            return null;
+            */
 
         } catch (NoNodeAvailableException e) {
 
             log.error("No available Elasticsearch Nodes to connect. Please give correct configurations and run Elasticsearch.");
 
-            return null;
-
         }
 
     }
 
+    /**
+     * Takes time in milliseconds and returns the formatted date and time according to Elasticsearch
+     *
+     * @param time long time in millis
+     * @return timeStamp formatted according to the Elasticsearch
+     */
     private static String getFormattedDate(long time) {
 
         Date date = new Date(time);
 
-        // Formatting timestamp according to Elasticsearch
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         String formattedDate = dateFormat.format(date);
 

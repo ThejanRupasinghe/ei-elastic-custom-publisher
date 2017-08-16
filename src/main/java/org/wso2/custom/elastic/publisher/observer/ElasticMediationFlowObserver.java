@@ -18,7 +18,6 @@ import org.wso2.custom.elastic.publisher.util.ElasticObserverConstants;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 
 public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
@@ -27,6 +26,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     // Defines elasticsearch Transport Client as client
     private static TransportClient client = null;
 
+    // Thread to publish jsons to Elasticsearch
     PublisherThread publisherThread;
 
     /**
@@ -41,11 +41,11 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         String portString = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_PORT);
 
         // Elasticsearch settings object
-        Settings settings = Settings.builder()
-                .put("cluster.name", clusterName)
-                .build();
+        Settings settings = Settings.builder().put("cluster.name", clusterName).build();
 
         client = new PreBuiltTransportClient(settings);
+
+        Exception exp = null;
 
         try {
 
@@ -55,15 +55,23 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
         } catch (UnknownHostException e) {
 
+            exp = e;
             log.error("Unknown Elasticsearch Host");
 
         } catch (NumberFormatException e) {
 
+            exp = e;
             log.error("Invalid port number");
-        }
 
-        publisherThread = new PublisherThread();
-        publisherThread.start();
+        }finally {
+
+            // Only if there is no exception, publisher thread is started
+            if(exp==null){
+                publisherThread = new PublisherThread();
+                publisherThread.start();
+            }
+
+        }
 
     }
 
@@ -73,11 +81,11 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     @Override
     public void destroy() {
 
+        publisherThread.shutdown();
+
         if (client != null) {
             client.close();
         }
-
-        publisherThread.shutdown();
 
         if (log.isDebugEnabled()) {
             log.debug("Shutting down the mediation statistics observer of Elasticsearch");
@@ -87,7 +95,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
     /**
      * Method is called when this observer is notified.
-     * Calls to process the the publishingFlow and pass the processed json to publish.
+     * Invokes the process method for the publishing flow considering whether there are any nodes connected.
      *
      * @param publishingFlow PublishingFlow object is passed when notified.
      */
@@ -96,12 +104,19 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
         try {
 
+            // If no connected nodes queue size will be limited
             if (client.connectedNodes().isEmpty()) {
-                if(ElasticStatisticsPublisher.all.size() < 10){
-                    ArrayList<String> jsonsToPublish = ElasticStatisticsPublisher.process(publishingFlow);
+
+                // TODO: 8/16/17 Take the queue size from carbon.xml 
+                if(ElasticStatisticsPublisher.allMappingsQueue.size() < 10){
+                    ElasticStatisticsPublisher.process(publishingFlow);
+                    ElasticStatisticsPublisher.allMappingsQueue.toString();
                 }
+                
             }else {
-                ArrayList<String> jsonsToPublish = ElasticStatisticsPublisher.process(publishingFlow);
+                
+                ElasticStatisticsPublisher.process(publishingFlow);
+                
             }
 
         } catch (Exception e) {
@@ -112,6 +127,10 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
     }
 
+    /**
+     *
+     * @return Transport Client for Elasticsearch
+     */
     public static TransportClient getClient(){
         return client;
     }
