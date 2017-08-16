@@ -13,6 +13,7 @@ import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.das.messageflow.data.publisher.observer.MessageFlowObserver;
 
 import org.wso2.custom.elastic.publisher.publish.ElasticStatisticsPublisher;
+import org.wso2.custom.elastic.publisher.services.PublisherThread;
 import org.wso2.custom.elastic.publisher.util.ElasticObserverConstants;
 
 import java.net.InetAddress;
@@ -24,7 +25,9 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     private static final Log log = LogFactory.getLog(ElasticMediationFlowObserver.class);
 
     // Defines elasticsearch Transport Client as client
-    private TransportClient client = null;
+    private static TransportClient client = null;
+
+    PublisherThread publisherThread;
 
     /**
      * Instantiates the TransportClient as this class is instantiates
@@ -59,6 +62,9 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
             log.error("Invalid port number");
         }
 
+        publisherThread = new PublisherThread();
+        publisherThread.start();
+
     }
 
     /**
@@ -70,6 +76,8 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         if (client != null) {
             client.close();
         }
+
+        publisherThread.shutdown();
 
         if (log.isDebugEnabled()) {
             log.debug("Shutting down the mediation statistics observer of Elasticsearch");
@@ -88,10 +96,12 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
         try {
 
-            ArrayList<String> jsonsToPublish = ElasticStatisticsPublisher.process(publishingFlow);
-
-            if (jsonsToPublish != null) {
-                ElasticStatisticsPublisher.publish(jsonsToPublish, client);
+            if (client.connectedNodes().isEmpty()) {
+                if(ElasticStatisticsPublisher.all.size() < 10){
+                    ArrayList<String> jsonsToPublish = ElasticStatisticsPublisher.process(publishingFlow);
+                }
+            }else {
+                ArrayList<String> jsonsToPublish = ElasticStatisticsPublisher.process(publishingFlow);
             }
 
         } catch (Exception e) {
@@ -100,6 +110,10 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
         }
 
+    }
+
+    public static TransportClient getClient(){
+        return client;
     }
 
 }

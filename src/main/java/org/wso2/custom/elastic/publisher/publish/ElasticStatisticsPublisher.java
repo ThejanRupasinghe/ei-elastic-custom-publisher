@@ -13,16 +13,19 @@ import org.wso2.carbon.das.data.publisher.util.PublisherUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.transport.TransportClient;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ElasticStatisticsPublisher {
 
     private static final Log log = LogFactory.getLog(ElasticStatisticsPublisher.class);
+
+    public static Queue<Map<String, Object>> all = new ConcurrentLinkedQueue<Map<String, Object>>();
+
 
     /**
      * Processes the PublishingFlow into a simple json format
@@ -38,24 +41,7 @@ public class ElasticStatisticsPublisher {
         String flowid = publishingFlow.getMessageFlowId();
         String host = PublisherUtil.getHostAddress();
 
-        // Takes main message details
-        /*
-        Map<String, Object> mappingApiProxy = new HashMap<String, Object>();
-        mappingApiProxy.put("flowid", flowid);
-        mappingApiProxy.put("host", host);
-        mappingApiProxy.put("type", publishingFlow.getEvent(0).getComponentType());
-        mappingApiProxy.put("name", publishingFlow.getEvent(0).getComponentName());
-        mappingApiProxy.put("@timestamp", getFormattedDate(publishingFlow.getEvent(0).getStartTime()));
-        if (publishingFlow.getEvent(0).getFaultCount() > 0) {
-            mappingApiProxy.put("success", false);
-        } else {
-            mappingApiProxy.put("success", true);
-        }
-        allMappings.add(mappingApiProxy);
-        */
-
         ArrayList<PublishingEvent> events = publishingFlow.getEvents();
-
 
         for (PublishingEvent event : events) {
 
@@ -63,8 +49,9 @@ public class ElasticStatisticsPublisher {
             String componentName = event.getComponentName();
             boolean success = true;
 
-            // TODO: 8/15/17 how to consider inbound endpoints
-            if (componentType.equals("Sequence") || componentType.equals("Endpoint") || componentType.equals("API") || componentType.equals("Proxy Service")) {
+            if (componentType.equals("Sequence") || componentType.equals("Endpoint") ||
+                    componentType.equals("API") || componentType.equals("Proxy Service") ||
+                    componentType.equals("Inbound EndPoint")) {
                 Map<String, Object> mapping = new HashMap<String, Object>();
 
                 if (!(componentName.equals("API_INSEQ") || componentName.equals("API_OUTSEQ") ||
@@ -81,6 +68,7 @@ public class ElasticStatisticsPublisher {
                     }
                     mapping.put("success", success);
                     allMappings.add(mapping);
+                    all.add(mapping);
                 }
 
             }
