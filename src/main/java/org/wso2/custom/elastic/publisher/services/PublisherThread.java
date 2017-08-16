@@ -83,5 +83,12 @@ public class PublisherThread extends Thread {
         shutdownRequested = true;
     }
 
+    /**
+     *
+     * @return boolean shutdownRequested
+     */
+    public boolean getShutdown() {
+        return shutdownRequested;
+    }
 
 }

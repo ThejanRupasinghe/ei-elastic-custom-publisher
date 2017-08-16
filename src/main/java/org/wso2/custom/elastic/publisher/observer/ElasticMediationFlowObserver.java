@@ -104,19 +104,24 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
         try {
 
-            // If no connected nodes queue size will be limited
-            if (client.connectedNodes().isEmpty()) {
+            // Statistics should only be processed if the publishing thread is alive and no shut down requested
+            if(publisherThread.isAlive() && !(publisherThread.getShutdown())) {
 
-                // TODO: 8/16/17 Take the queue size from carbon.xml 
-                if(ElasticStatisticsPublisher.allMappingsQueue.size() < 10){
+                // If no connected nodes queue size will be limited
+                if (client.connectedNodes().isEmpty()) {
+
+                    // TODO: 8/16/17 Take the queue size from carbon.xml
+                    if (ElasticStatisticsPublisher.allMappingsQueue.size() < 10) {
+                        ElasticStatisticsPublisher.process(publishingFlow);
+                        log.info(ElasticStatisticsPublisher.allMappingsQueue.toString());
+                    }
+
+                } else {
+
                     ElasticStatisticsPublisher.process(publishingFlow);
-                    ElasticStatisticsPublisher.allMappingsQueue.toString();
+
                 }
-                
-            }else {
-                
-                ElasticStatisticsPublisher.process(publishingFlow);
-                
+
             }
 
         } catch (Exception e) {
