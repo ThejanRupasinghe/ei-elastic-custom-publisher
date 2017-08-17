@@ -24,8 +24,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingEvent;
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingFlow;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
-import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.client.transport.NoNodeAvailableException;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.wso2.carbon.das.data.publisher.util.PublisherUtil;
 
 import org.elasticsearch.client.transport.TransportClient;
@@ -36,6 +36,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ElasticStatisticsPublisher {
+
+    private ElasticStatisticsPublisher(){
+    }
 
     private static final Log log = LogFactory.getLog(ElasticStatisticsPublisher.class);
 
@@ -103,19 +106,19 @@ public class ElasticStatisticsPublisher {
      * @param jsonsToSend array list of json strings to be published to Elasticsearch
      * @param client      elasticsearch Transport client
      */
-    public static void publish(ArrayList<String> jsonsToSend, TransportClient client) {
+    public static void publish(List<String> jsonsToSend, TransportClient client) {
 
         try {
 
             BulkRequestBuilder bulkRequest = client.prepareBulk();
             for (String jsonString : jsonsToSend) {
                 bulkRequest.add(client.prepareIndex("test_eidata", "data")
-                        .setSource(jsonString)
+                        .setSource(jsonString, XContentType.JSON)
                 );
                 log.info(jsonString);
             }
 
-            BulkResponse bulkResponse = bulkRequest.get();
+            bulkRequest.get();
             /*
             if (bulkResponse.hasFailures()) {
                 log.info("Failures");
@@ -147,11 +150,14 @@ public class ElasticStatisticsPublisher {
 //        timeFormat.setTimeZone(new SimpleTimeZone(SimpleTimeZone.UTC_TIME, "UTC"));
         String formattedTime = timeFormat.format(date);
 
-        String timestampElastic = formattedDate + "T" + formattedTime + "Z";
+        return formattedDate + "T" + formattedTime + "Z";
 
-        return timestampElastic;
     }
 
+    /**
+     *
+     * @return queue which includes all the Maps that are to be converted into json strings
+     */
     public static Queue<Map<String, Object>> getAllMappingsQueue() {
         return allMappingsQueue;
     }

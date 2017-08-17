@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.elasticsearch.client.transport.TransportClient;
-import org.wso2.custom.elastic.publisher.observer.ElasticMediationFlowObserver;
 import org.wso2.custom.elastic.publisher.publish.ElasticStatisticsPublisher;
 
 import java.util.ArrayList;
@@ -38,7 +37,7 @@ public class PublisherThread extends Thread {
 
     private TransportClient client;
 
-
+    @Override
     public void run (){
 
         // While not shutdown
@@ -50,7 +49,7 @@ public class PublisherThread extends Thread {
                     // Sleep for 1 second if the queue is empty
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
-
+                    log.warn("Publisher Thread interrupted");
                 }
 
             } else {
@@ -68,7 +67,7 @@ public class PublisherThread extends Thread {
                         // Sleep for 5 seconds if no nodes are available
                         Thread.sleep(5000);
                     } catch (InterruptedException e) {
-
+                        log.warn("Publisher Thread interrupted");
                     }
 
                 }else{
