@@ -47,7 +47,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     // Thread to publish jsons to Elasticsearch
     PublisherThread publisherThread;
 
-    int queueSize;
+    int queueSize = ElasticObserverConstants.DEFAULT_QUEUE_SIZE;
     Exception exp = null;
 
 
@@ -117,7 +117,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
     /**
      * Method is called when this observer is notified.
-     * Invokes the process method for the publishing flow considering whether there are any nodes connected.
+     * Invokes the process method considering about the queue size.
      *
      * @param publishingFlow PublishingFlow object is passed when notified.
      */
@@ -130,18 +130,10 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
                 // Statistics should only be processed if the publishing thread is alive and no shut down requested
                 if (publisherThread.isAlive() && !(publisherThread.getShutdown())) {
 
-                    // If no connected nodes queue size will be limited
-                    if (client.connectedNodes().isEmpty()) {
-
-                        if (ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize) {
-                            ElasticStatisticsPublisher.process(publishingFlow);
-                            log.info(ElasticStatisticsPublisher.getAllMappingsQueue().toString());
-                        }
-
-                    } else {
-
+                    // Limited queue size
+                    if (ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize) {
                         ElasticStatisticsPublisher.process(publishingFlow);
-
+                        log.info(ElasticStatisticsPublisher.getAllMappingsQueue().toString());
                     }
 
                 }

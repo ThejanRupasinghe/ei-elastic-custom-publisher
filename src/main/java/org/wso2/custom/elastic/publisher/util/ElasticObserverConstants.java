@@ -31,5 +31,6 @@ public class ElasticObserverConstants {
     public static final String OBSERVER_CLUSTER_NAME = OBSERVER_ELEMENT + ".ClusterName";
     public static final String OBSERVER_PORT = OBSERVER_ELEMENT + ".Port";
     public static final String QUEUE_SIZE = OBSERVER_ELEMENT + ".QueueSize";
+    public static final int DEFAULT_QUEUE_SIZE = 1000;
 
 }
