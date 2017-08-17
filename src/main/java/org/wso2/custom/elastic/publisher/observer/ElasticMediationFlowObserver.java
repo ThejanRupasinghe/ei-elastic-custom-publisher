@@ -29,6 +29,10 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     // Thread to publish jsons to Elasticsearch
     PublisherThread publisherThread;
 
+    int queueSize;
+    Exception exp = null;
+
+
     /**
      * Instantiates the TransportClient as this class is instantiates
      */
@@ -39,17 +43,18 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         String clusterName = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_CLUSTER_NAME);
         String host = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_HOST);
         String portString = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_PORT);
+        String queueSizeString = serverConf.getFirstProperty(ElasticObserverConstants.QUEUE_SIZE);
+
 
         // Elasticsearch settings object
         Settings settings = Settings.builder().put("cluster.name", clusterName).build();
 
         client = new PreBuiltTransportClient(settings);
 
-        Exception exp = null;
-
         try {
 
             int port = Integer.parseInt(portString);
+            queueSize = Integer.parseInt(queueSizeString);
 
             client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
 
@@ -63,10 +68,10 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
             exp = e;
             log.error("Invalid port number");
 
-        }finally {
+        } finally {
 
             // Only if there is no exception, publisher thread is started
-            if(exp==null){
+            if (exp == null) {
                 publisherThread = new PublisherThread();
                 publisherThread.start();
             }
@@ -102,41 +107,41 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     @Override
     public void updateStatistics(PublishingFlow publishingFlow) {
 
-        try {
+        if (exp == null) {
+            try {
 
-            // Statistics should only be processed if the publishing thread is alive and no shut down requested
-            if(publisherThread.isAlive() && !(publisherThread.getShutdown())) {
+                // Statistics should only be processed if the publishing thread is alive and no shut down requested
+                if (publisherThread.isAlive() && !(publisherThread.getShutdown())) {
 
-                // If no connected nodes queue size will be limited
-                if (client.connectedNodes().isEmpty()) {
+                    // If no connected nodes queue size will be limited
+                    if (client.connectedNodes().isEmpty()) {
 
-                    // TODO: 8/16/17 Take the queue size from carbon.xml
-                    if (ElasticStatisticsPublisher.allMappingsQueue.size() < 10) {
+                        if (ElasticStatisticsPublisher.allMappingsQueue.size() < queueSize) {
+                            ElasticStatisticsPublisher.process(publishingFlow);
+                            log.info(ElasticStatisticsPublisher.allMappingsQueue.toString());
+                        }
+
+                    } else {
+
                         ElasticStatisticsPublisher.process(publishingFlow);
-                        log.info(ElasticStatisticsPublisher.allMappingsQueue.toString());
+
                     }
-
-                } else {
-
-                    ElasticStatisticsPublisher.process(publishingFlow);
 
                 }
 
+            } catch (Exception e) {
+
+                log.error("Failed to update statics from Elasticsearch publisher", e);
+
             }
 
-        } catch (Exception e) {
-
-            log.error("Failed to update statics from Elasticsearch publisher", e);
-
         }
-
     }
 
     /**
-     *
      * @return Transport Client for Elasticsearch
      */
-    public static TransportClient getClient(){
+    public static TransportClient getClient() {
         return client;
     }
 

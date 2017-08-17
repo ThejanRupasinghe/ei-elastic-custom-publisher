@@ -9,5 +9,6 @@ public class ElasticObserverConstants {
     public static final String OBSERVER_HOST = OBSERVER_ELEMENT + ".Host";
     public static final String OBSERVER_CLUSTER_NAME = OBSERVER_ELEMENT + ".ClusterName";
     public static final String OBSERVER_PORT = OBSERVER_ELEMENT + ".Port";
+    public static final String QUEUE_SIZE = OBSERVER_ELEMENT + ".QueueSize";
 
 }
