@@ -1,9 +1,28 @@
+/*
+* Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+*
+* WSO2 Inc. licenses this file to you under the Apache License,
+* Version 2.0 (the "License"); you may not use this file except
+* in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied. See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+
 package org.wso2.custom.elastic.publisher.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.elasticsearch.client.transport.TransportClient;
 import org.wso2.custom.elastic.publisher.observer.ElasticMediationFlowObserver;
 import org.wso2.custom.elastic.publisher.publish.ElasticStatisticsPublisher;
 
@@ -17,13 +36,15 @@ public class PublisherThread extends Thread {
     // To stop running
     private volatile boolean shutdownRequested = false;
 
+    private TransportClient client;
+
 
     public void run (){
 
         // While not shutdown
         while (!(shutdownRequested)) {
 
-            if (ElasticStatisticsPublisher.allMappingsQueue.isEmpty()) {
+            if (ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty()) {
 
                 try {
                     // Sleep for 1 second if the queue is empty
@@ -39,7 +60,7 @@ public class PublisherThread extends Thread {
                 ArrayList<String> jsonStringList = new ArrayList<String>();
 
 
-                if (ElasticMediationFlowObserver.getClient().connectedNodes().isEmpty()) {
+                if (client.connectedNodes().isEmpty()) {
 
                     log.info("No available Elasticsearch nodes to connect. Waiting for nodes... ");
 
@@ -53,10 +74,10 @@ public class PublisherThread extends Thread {
                 }else{
 
                     // While the map queue is not empty
-                    while (!(ElasticStatisticsPublisher.allMappingsQueue.isEmpty())) {
+                    while (!(ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty())) {
 
                         // Dequeue Map from the queue
-                        Map<String, Object> map = ElasticStatisticsPublisher.allMappingsQueue.poll();
+                        Map<String, Object> map = ElasticStatisticsPublisher.getAllMappingsQueue().poll();
 
                         try {
                             jsonStringList.add(objectMapper.writeValueAsString(map));
@@ -67,7 +88,7 @@ public class PublisherThread extends Thread {
                     }
 
                     // Publish the json string list
-                    ElasticStatisticsPublisher.publish(jsonStringList, ElasticMediationFlowObserver.getClient());
+                    ElasticStatisticsPublisher.publish(jsonStringList, client);
                 }
             }
         }
@@ -89,6 +110,10 @@ public class PublisherThread extends Thread {
      */
     public boolean getShutdown() {
         return shutdownRequested;
+    }
+
+    public void setClient(TransportClient transportClient) {
+        client = transportClient;
     }
 
 }

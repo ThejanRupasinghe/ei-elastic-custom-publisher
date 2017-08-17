@@ -1,3 +1,21 @@
+/*
+* Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+*
+* WSO2 Inc. licenses this file to you under the Apache License,
+* Version 2.0 (the "License"); you may not use this file except
+* in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied. See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+
 package org.wso2.custom.elastic.publisher.observer;
 
 import org.apache.commons.logging.Log;
@@ -24,7 +42,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     private static final Log log = LogFactory.getLog(ElasticMediationFlowObserver.class);
 
     // Defines elasticsearch Transport Client as client
-    private static TransportClient client = null;
+    private TransportClient client = null;
 
     // Thread to publish jsons to Elasticsearch
     PublisherThread publisherThread;
@@ -72,8 +90,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
             // Only if there is no exception, publisher thread is started
             if (exp == null) {
-                publisherThread = new PublisherThread();
-                publisherThread.start();
+                startPublishing();
             }
 
         }
@@ -116,9 +133,9 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
                     // If no connected nodes queue size will be limited
                     if (client.connectedNodes().isEmpty()) {
 
-                        if (ElasticStatisticsPublisher.allMappingsQueue.size() < queueSize) {
+                        if (ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize) {
                             ElasticStatisticsPublisher.process(publishingFlow);
-                            log.info(ElasticStatisticsPublisher.allMappingsQueue.toString());
+                            log.info(ElasticStatisticsPublisher.getAllMappingsQueue().toString());
                         }
 
                     } else {
@@ -138,11 +155,11 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         }
     }
 
-    /**
-     * @return Transport Client for Elasticsearch
-     */
-    public static TransportClient getClient() {
-        return client;
+
+    private void startPublishing() {
+        publisherThread = new PublisherThread();
+        publisherThread.setClient(client);
+        publisherThread.start();
     }
 
 }
