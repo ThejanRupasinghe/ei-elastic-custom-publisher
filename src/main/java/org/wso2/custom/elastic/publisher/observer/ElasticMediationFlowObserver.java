@@ -128,13 +128,13 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
             try {
 
                 // Statistics should only be processed if the publishing thread is alive and no shut down requested
-                if (publisherThread.isAlive() && !(publisherThread.getShutdown())) {
+                // and queue size is not exceeded
+                if (publisherThread.isAlive() &&
+                        !(publisherThread.getShutdown()) &&
+                        ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize)
+                {
 
-                    // Limited queue size
-                    if (ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize) {
                         ElasticStatisticsPublisher.process(publishingFlow);
-                        log.info(ElasticStatisticsPublisher.getAllMappingsQueue().toString());
-                    }
 
                 }
 
@@ -148,6 +148,9 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     }
 
 
+    /**
+     * Instantiates the publisher thread, passes the transport client and starts.
+     */
     private void startPublishing() {
         publisherThread = new PublisherThread();
         publisherThread.setClient(client);
