@@ -61,7 +61,7 @@ public class PublisherThread extends Thread {
 
                 if (client.connectedNodes().isEmpty()) {
 
-                    log.info("No available Elasticsearch nodes to connect. Waiting for nodes... ");
+                    log.error("No available Elasticsearch nodes to connect. Waiting for nodes... ");
 
                     try {
                         // Sleep for 5 seconds if no nodes are available

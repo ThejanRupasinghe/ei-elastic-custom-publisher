@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ElasticStatisticsPublisher {
 
-    private ElasticStatisticsPublisher(){
+    private ElasticStatisticsPublisher() {
     }
 
     private static final Log log = LogFactory.getLog(ElasticStatisticsPublisher.class);
@@ -76,7 +76,7 @@ public class ElasticStatisticsPublisher {
                 // Ignore events with theses ComponentNames
                 if (!(componentName.equals("API_INSEQ") || componentName.equals("API_OUTSEQ") ||
                         componentName.equals("PROXY_INSEQ") || componentName.equals("PROXY_OUTSEQ") ||
-                        componentName.equals("AnonymousEndpoint") )) {
+                        componentName.equals("AnonymousEndpoint"))) {
 
                     mapping.put("type", componentType);
                     mapping.put("name", componentName);
@@ -115,7 +115,11 @@ public class ElasticStatisticsPublisher {
                 bulkRequest.add(client.prepareIndex("test_eidata", "data")
                         .setSource(jsonString, XContentType.JSON)
                 );
-                log.info(jsonString);
+
+                if (log.isDebugEnabled()) {
+                    log.info(jsonString);
+
+                }
             }
 
             bulkRequest.get();
@@ -155,7 +159,6 @@ public class ElasticStatisticsPublisher {
     }
 
     /**
-     *
      * @return queue which includes all the Maps that are to be converted into json strings
      */
     public static Queue<Map<String, Object>> getAllMappingsQueue() {
