@@ -117,7 +117,7 @@ public class ElasticStatisticsPublisher {
                 );
 
                 if (log.isDebugEnabled()) {
-                    log.info(jsonString);
+                    log.debug(jsonString);
 
                 }
             }

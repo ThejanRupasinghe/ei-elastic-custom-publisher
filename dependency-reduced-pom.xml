@@ -26,6 +26,9 @@
                   <exclude>org.wso2.orbit.com.fasterxml.jackson.core:jackson-databind</exclude>
                   <exclude>commons-logging:commons-logging</exclude>
                 </excludes>
+                <includes>
+                  <include>org.elasticsearch.client:transport</include>
+                </includes>
               </artifactSet>
             </configuration>
           </execution>
