@@ -151,7 +151,7 @@ public class ElasticStatisticsPublisher {
         String formattedDate = dateFormat.format(date);
 
         DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss.SSS");
-//        timeFormat.setTimeZone(new SimpleTimeZone(SimpleTimeZone.UTC_TIME, "UTC"));
+        timeFormat.setTimeZone(new SimpleTimeZone(SimpleTimeZone.UTC_TIME, "UTC"));
         String formattedTime = timeFormat.format(date);
 
         return formattedDate + "T" + formattedTime + "Z";

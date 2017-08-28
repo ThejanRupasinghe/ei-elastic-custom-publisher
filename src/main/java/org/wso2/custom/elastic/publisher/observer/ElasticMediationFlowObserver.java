@@ -74,7 +74,6 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
             int port = Integer.parseInt(portString);
             queueSize = Integer.parseInt(queueSizeString);
 
-            // TODO: 8/20/17 check with the IP address of localhost
             client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
 
         } catch (UnknownHostException e) {
