@@ -6,7 +6,7 @@
 
     <groupId>org.wso2.ei</groupId>
     <artifactId>org.wso2.custom.elastic.publisher</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
     <build>
         <plugins>
             <!--<plugin>-->
@@ -51,7 +51,8 @@
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
                         <Axis2Module>${project.artifactId}-${project.version}</Axis2Module>
                         <Export-Package>
-                            org.wso2.custom.elastic.publisher.*
+                            org.wso2.custom.elastic.publisher.*,
+                            org.apache.commons.logging; version="1.2.0"
                         </Export-Package>
                         <Import-Package>
                             org.wso2.carbon.das.messageflow.data.publish.*,
@@ -63,12 +64,20 @@
                     </instructions>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
         </plugins>
+        <finalName>org.wso2.custom.elastic.publisher_1.0</finalName>
     </build>
     <name>Elasticsearch - Message Flow Data Publisher</name>
     <description>Custom statistic observer for WSO2 EI to publish statistic to Elasticsearch</description>
     <packaging>bundle</packaging>
-
 
     <!--WSO2 Maven Repos-->
     <repositories>
@@ -104,6 +113,16 @@
                 <enabled>false</enabled>
             </releases>
         </repository>
+        <repository>
+            <id>elasticsearch-releases</id>
+            <url>https://artifacts.elastic.co/maven</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
     </repositories>
 
     <!--Defining version numbers-->
@@ -128,6 +147,11 @@
             <artifactId>org.wso2.carbon.das.messageflow.data.publisher</artifactId>
             <version>4.6.21-SNAPSHOT</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.elasticsearch.client</groupId>
+            <artifactId>x-pack-transport</artifactId>
+            <version>${elasticsearch.version}</version>
         </dependency>
         <!--<dependency>-->
             <!--<groupId>commons-codec</groupId>-->

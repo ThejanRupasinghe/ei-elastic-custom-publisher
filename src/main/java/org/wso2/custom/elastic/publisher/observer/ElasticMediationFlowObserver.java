@@ -21,12 +21,19 @@ package org.wso2.custom.elastic.publisher.observer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.transport.RemoteTransportException;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingFlow;
+import org.elasticsearch.xpack.client.PreBuiltXPackTransportClient;
+import org.elasticsearch.xpack.security.action.user.GetUsersRequest;
+import org.elasticsearch.xpack.security.action.user.PutUserAction;
+import org.elasticsearch.xpack.security.action.user.PutUserRequest;
+import org.elasticsearch.xpack.security.action.user.PutUserResponse;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.das.messageflow.data.publisher.observer.MessageFlowObserver;
 
@@ -44,8 +51,8 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     // Defines elasticsearch Transport Client as client
     private TransportClient client = null;
 
-    // Thread to publish jsons to Elasticsearch
-    PublisherThread publisherThread;
+    // Thread to publish json strings to Elasticsearch
+    private PublisherThread publisherThread = null;
 
     int queueSize = ElasticObserverConstants.DEFAULT_QUEUE_SIZE;
     Exception exp = null;
@@ -62,12 +69,25 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         String host = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_HOST);
         String portString = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_PORT);
         String queueSizeString = serverConf.getFirstProperty(ElasticObserverConstants.QUEUE_SIZE);
+        String username = serverConf.getFirstProperty(ElasticObserverConstants.USERNAME);
+        String password = serverConf.getFirstProperty(ElasticObserverConstants.PASSWORD);
 
 
         // Elasticsearch settings object
-        Settings settings = Settings.builder().put("cluster.name", clusterName).build();
+        Settings.Builder settingsBuilder = Settings.builder()
+                .put("cluster.name", clusterName);
 
-        client = new PreBuiltTransportClient(settings);
+        if (username != null && password != null) {
+
+            settingsBuilder.put("xpack.security.user", username + ":" + password);
+            client = new PreBuiltXPackTransportClient(settingsBuilder.build());
+
+        } else {
+
+            client = new PreBuiltTransportClient(settingsBuilder.build());
+
+        }
+
 
         try {
 
@@ -80,17 +100,36 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
             exp = e;
             log.error("Unknown Elasticsearch Host");
+            client.close();
 
         } catch (NumberFormatException e) {
 
             exp = e;
             log.error("Invalid port number");
+            client.close();
+
+        } catch (Exception e) {
+
+            exp = e;
+            log.error("Elasticsearch connection error");
+            client.close();
 
         } finally {
 
-            // Only if there is no exception, publisher thread is started
+            // Only if there is no exception, publisher thread will be started
             if (exp == null) {
-                startPublishing();
+
+                if (client.connectedNodes().isEmpty()) {
+
+                    log.error("No available Elasticsearch Nodes to connect. Please give correct configurations " +
+                            "and run Elasticsearch.");
+
+                } else {
+
+                    startPublishing();
+                    log.info("Elasticsearch mediation statistic publishing enabled");
+
+                }
             }
 
         }
@@ -124,27 +163,46 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     @Override
     public void updateStatistics(PublishingFlow publishingFlow) {
 
-        if (exp == null) {
+
+        if ((exp == null)) {
+
             try {
 
-                // Statistics should only be processed if the publishing thread is alive and no shut down requested
-                // and queue size is not exceeded
-                if (publisherThread.isAlive() &&
-                        !(publisherThread.getShutdown()) &&
-                        ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize)
-                {
+                if (publisherThread == null && !(client.connectedNodes().isEmpty())) {
+
+                    startPublishing();
+
+                }
+
+                // Statistics should only be processed if the queue size is not exceeded
+
+                if (ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize) {
+
+                    if (publisherThread == null) {
 
                         ElasticStatisticsPublisher.process(publishingFlow);
+
+                    } else {
+
+                        if (!(publisherThread.getShutdown()) &&
+                                ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize) {
+
+                            ElasticStatisticsPublisher.process(publishingFlow);
+
+                        }
+
+                    }
 
                 }
 
             } catch (Exception e) {
 
-                log.error("Failed to update statics from Elasticsearch publisher", e);
+                log.error("Failed to update statistics from Elasticsearch publisher", e);
 
             }
 
         }
+
     }
 
 
@@ -152,10 +210,12 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
      * Instantiates the publisher thread, passes the transport client and starts.
      */
     private void startPublishing() {
+
         publisherThread = new PublisherThread();
         publisherThread.setName("ElasticsearchPublisherThread");
         publisherThread.setClient(client);
         publisherThread.start();
+
     }
 
 }

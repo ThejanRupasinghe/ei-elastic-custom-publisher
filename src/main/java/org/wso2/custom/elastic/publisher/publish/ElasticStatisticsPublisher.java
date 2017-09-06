@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingEvent;
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingFlow;
+import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.client.transport.NoNodeAvailableException;
 import org.elasticsearch.common.xcontent.XContentType;
@@ -50,7 +51,6 @@ public class ElasticStatisticsPublisher {
      * Processes the PublishingFlow into a simple json format
      *
      * @param publishingFlow PublishingFlow object which contains the publishing events
-     * @return if success processed json, if exception null
      */
     public static void process(PublishingFlow publishingFlow) {
 
@@ -112,7 +112,7 @@ public class ElasticStatisticsPublisher {
 
             BulkRequestBuilder bulkRequest = client.prepareBulk();
             for (String jsonString : jsonsToSend) {
-                bulkRequest.add(client.prepareIndex("test_eidata", "data")
+                bulkRequest.add(client.prepareIndex("eidata", "data")
                         .setSource(jsonString, XContentType.JSON)
                 );
 
@@ -131,8 +131,14 @@ public class ElasticStatisticsPublisher {
 
         } catch (NoNodeAvailableException e) {
 
-            log.error("No available Elasticsearch Nodes to connect. Please give correct configurations and run Elasticsearch.");
+            log.error("No available Elasticsearch Nodes to connect. Please give correct configurations and" +
+                    " run Elasticsearch.");
 
+        } catch (ElasticsearchSecurityException e) {
+
+            log.error("Wrong Elasticsearch access credentials.");
+
+            client.close();
         }
 
     }

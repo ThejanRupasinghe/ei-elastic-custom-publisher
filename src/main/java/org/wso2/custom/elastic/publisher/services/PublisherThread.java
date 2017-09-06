@@ -38,7 +38,7 @@ public class PublisherThread extends Thread {
     private TransportClient client;
 
     @Override
-    public void run (){
+    public void run() {
 
         // While not shutdown
         while (!(shutdownRequested)) {
@@ -70,7 +70,7 @@ public class PublisherThread extends Thread {
                         log.warn("Publisher Thread interrupted");
                     }
 
-                }else{
+                } else {
 
                     // While the map queue is not empty
                     while (!(ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty())) {
@@ -104,7 +104,6 @@ public class PublisherThread extends Thread {
     }
 
     /**
-     *
      * @return boolean shutdownRequested
      */
     public boolean getShutdown() {
