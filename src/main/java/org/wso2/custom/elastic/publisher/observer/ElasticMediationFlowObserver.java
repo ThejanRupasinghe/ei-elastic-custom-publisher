@@ -28,15 +28,10 @@ import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.transport.RemoteTransportException;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingFlow;
 import org.elasticsearch.xpack.client.PreBuiltXPackTransportClient;
-import org.elasticsearch.xpack.security.action.user.GetUsersRequest;
-import org.elasticsearch.xpack.security.action.user.PutUserAction;
-import org.elasticsearch.xpack.security.action.user.PutUserRequest;
-import org.elasticsearch.xpack.security.action.user.PutUserResponse;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.das.messageflow.data.publisher.observer.MessageFlowObserver;
 
@@ -133,7 +128,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
                         IndexResponse responseIndex = client.prepareIndex("eidata", "data", "1")
                                 .setSource("{" +
-                                        "\"testAtt\":\"test\"," +
+                                        "\"test_att\":\"test\"" +
                                         "}", XContentType.JSON)
                                 .get();
 

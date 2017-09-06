@@ -50,6 +50,7 @@ public class PublisherThread extends Thread {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     log.warn("Publisher Thread interrupted");
+                    Thread.currentThread().interrupt();
                 }
 
             } else {
@@ -68,6 +69,7 @@ public class PublisherThread extends Thread {
                         Thread.sleep(5000);
                     } catch (InterruptedException e) {
                         log.warn("Publisher Thread interrupted");
+                        Thread.currentThread().interrupt();
                     }
 
                 } else {
