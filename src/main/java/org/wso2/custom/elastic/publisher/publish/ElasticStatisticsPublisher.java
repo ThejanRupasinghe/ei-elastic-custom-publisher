@@ -134,11 +134,6 @@ public class ElasticStatisticsPublisher {
             log.error("No available Elasticsearch Nodes to connect. Please give correct configurations and" +
                     " run Elasticsearch.");
 
-        } catch (ElasticsearchSecurityException e) {
-
-            log.error("Wrong Elasticsearch access credentials.");
-
-            client.close();
         }
 
     }

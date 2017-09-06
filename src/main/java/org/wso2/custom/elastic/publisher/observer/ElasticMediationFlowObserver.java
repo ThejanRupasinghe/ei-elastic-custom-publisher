@@ -22,9 +22,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.elasticsearch.ElasticsearchSecurityException;
+import org.elasticsearch.action.delete.DeleteResponse;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.transport.RemoteTransportException;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
@@ -126,15 +129,39 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
                 } else {
 
-                    startPublishing();
-                    log.info("Elasticsearch mediation statistic publishing enabled");
+                    try {
+
+                        IndexResponse responseIndex = client.prepareIndex("eidata", "data", "1")
+                                .setSource("{" +
+                                        "\"testAtt\":\"test\"," +
+                                        "}", XContentType.JSON)
+                                .get();
+
+                    } catch (ElasticsearchSecurityException e) {
+
+                        exp = e;
+                        log.error("Wrong Elasticsearch access credentials.");
+                        client.close();
+
+                    }
+
+                    if ( exp == null ) {
+
+                        DeleteResponse responseDel = client.prepareDelete("eidata", "data", "1").get();
+
+                        startPublishing();
+                        log.info("Elasticsearch mediation statistic publishing enabled");
+
+                    }
 
                 }
+
             }
 
         }
 
     }
+
 
     /**
      * TransportClient gets closed
@@ -153,6 +180,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         }
 
     }
+
 
     /**
      * Method is called when this observer is notified.
