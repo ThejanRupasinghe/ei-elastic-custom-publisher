@@ -72,6 +72,9 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         String portString = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_PORT);
         String queueSizeString = serverConf.getFirstProperty(ElasticObserverConstants.QUEUE_SIZE);
         String username = serverConf.getFirstProperty(ElasticObserverConstants.USERNAME);
+        String sslKey = serverConf.getFirstProperty(ElasticObserverConstants.SSL_KEY);
+        String sslCert = serverConf.getFirstProperty(ElasticObserverConstants.SSL_CERT);
+        String sslCa = serverConf.getFirstProperty(ElasticObserverConstants.SSL_CA);
 
         // carbon.xml document element
         Element element = serverConf.getDocumentElement();
@@ -92,13 +95,12 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         Settings.Builder settingsBuilder = Settings.builder()
                 .put("cluster.name", clusterName);
 
-        if (username != null && password != null) {
+        if (username != null && password != null && sslKey != null && sslCert != null && sslCa != null) {
 
-            // TODO: 9/7/17 take certificate paths from config file
             settingsBuilder.put("xpack.security.user", username + ":" + password)
-                    .put("xpack.ssl.key", "/home/thejan/WSO2/MyProject/CompleteTest/WithXPack/Elasticsearch/elasticsearch-5.4.3-node0/config/x-pack/certificates/node0/node0.key")
-                    .put("xpack.ssl.certificate", "/home/thejan/WSO2/MyProject/CompleteTest/WithXPack/Elasticsearch/elasticsearch-5.4.3-node0/config/x-pack/certificates/node0/node0.crt")
-                    .put("xpack.ssl.certificate_authorities", "/home/thejan/WSO2/MyProject/CompleteTest/WithXPack/Elasticsearch/elasticsearch-5.4.3-node0/config/x-pack/certificates/ca/ca.crt")
+                    .put("xpack.ssl.key", sslKey)
+                    .put("xpack.ssl.certificate", sslCert)
+                    .put("xpack.ssl.certificate_authorities", sslCa)
                     .put("xpack.security.transport.ssl.enabled", "true");
 
         }

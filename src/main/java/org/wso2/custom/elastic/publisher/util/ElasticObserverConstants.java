@@ -33,6 +33,9 @@ public class ElasticObserverConstants {
     public static final String QUEUE_SIZE = OBSERVER_ELEMENT + ".QueueSize";
     public static final String USERNAME = OBSERVER_ELEMENT + ".Username";
     public static final String PASSWORD_ALIAS = "Elastic.User.Password";
+    public static final String SSL_KEY = OBSERVER_ELEMENT + ".SslKey";
+    public static final String SSL_CERT = OBSERVER_ELEMENT + ".SslCertificate";
+    public static final String SSL_CA = OBSERVER_ELEMENT + ".SslCa";
     public static final int DEFAULT_QUEUE_SIZE = 5000;
 
 }
