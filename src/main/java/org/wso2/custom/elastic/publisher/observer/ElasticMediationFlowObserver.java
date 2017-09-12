@@ -28,7 +28,6 @@ import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.elasticsearch.xpack.client.PreBuiltXPackTransportClient;
 
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingFlow;
@@ -78,10 +77,16 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         Element element = serverConf.getDocumentElement();
 
         // Creates Secret Resolver from carbon.xml document element
-        SecretResolver secretResolver = SecretResolverFactory.create(element,true);
+        SecretResolver secretResolver = SecretResolverFactory.create(element, true);
 
         // Resolves password using the defined alias
         String password = secretResolver.resolve(ElasticObserverConstants.PASSWORD_ALIAS);
+
+        // If the alias is wrong or there is no password resolver returns the alias string again
+        if (password.equals(ElasticObserverConstants.PASSWORD_ALIAS)) {
+            log.error("No password in Secure Vault for the alias Elastic.User.Password");
+            password = null;
+        }
 
         // Elasticsearch settings object
         Settings.Builder settingsBuilder = Settings.builder()
@@ -96,14 +101,9 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
                     .put("xpack.ssl.certificate_authorities", "/home/thejan/WSO2/MyProject/CompleteTest/WithXPack/Elasticsearch/elasticsearch-5.4.3-node0/config/x-pack/certificates/ca/ca.crt")
                     .put("xpack.security.transport.ssl.enabled", "true");
 
-            client = new PreBuiltXPackTransportClient(settingsBuilder.build());
-
-        } else {
-
-            client = new PreBuiltTransportClient(settingsBuilder.build());
-
         }
 
+        client = new PreBuiltXPackTransportClient(settingsBuilder.build());
 
         try {
 
@@ -144,7 +144,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         } catch (NumberFormatException e) {
 
             exp = e;
-            log.error("Invalid port number");
+            log.error("Invalid port number or queue size value");
             client.close();
 
         } catch (ElasticsearchSecurityException e) { // lacks access privileges
