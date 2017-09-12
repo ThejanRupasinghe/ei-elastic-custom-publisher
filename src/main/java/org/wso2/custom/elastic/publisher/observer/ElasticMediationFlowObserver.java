@@ -29,15 +29,19 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
+import org.elasticsearch.xpack.client.PreBuiltXPackTransportClient;
 
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingFlow;
-import org.elasticsearch.xpack.client.PreBuiltXPackTransportClient;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.das.messageflow.data.publisher.observer.MessageFlowObserver;
+import org.wso2.securevault.SecretResolver;
+import org.wso2.securevault.SecretResolverFactory;
 
 import org.wso2.custom.elastic.publisher.publish.ElasticStatisticsPublisher;
 import org.wso2.custom.elastic.publisher.services.PublisherThread;
 import org.wso2.custom.elastic.publisher.util.ElasticObserverConstants;
+
+import org.w3c.dom.Element;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -57,19 +61,27 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
 
     /**
-     * Instantiates the TransportClient as this class is instantiates
+     * Instantiates the TransportClient as this class is instantiated
      */
     public ElasticMediationFlowObserver() {
 
         ServerConfiguration serverConf = ServerConfiguration.getInstance();
 
+        // Takes configuration details form carbon.xml
         String clusterName = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_CLUSTER_NAME);
         String host = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_HOST);
         String portString = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_PORT);
         String queueSizeString = serverConf.getFirstProperty(ElasticObserverConstants.QUEUE_SIZE);
         String username = serverConf.getFirstProperty(ElasticObserverConstants.USERNAME);
-        String password = serverConf.getFirstProperty(ElasticObserverConstants.PASSWORD);
 
+        // carbon.xml document element
+        Element element = serverConf.getDocumentElement();
+
+        // Creates Secret Resolver from carbon.xml document element
+        SecretResolver secretResolver = SecretResolverFactory.create(element,true);
+
+        // Resolves password using the defined alias
+        String password = secretResolver.resolve(ElasticObserverConstants.PASSWORD_ALIAS);
 
         // Elasticsearch settings object
         Settings.Builder settingsBuilder = Settings.builder()
@@ -77,7 +89,13 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
         if (username != null && password != null) {
 
-            settingsBuilder.put("xpack.security.user", username + ":" + password);
+            // TODO: 9/7/17 take certificate paths from config file
+            settingsBuilder.put("xpack.security.user", username + ":" + password)
+                    .put("xpack.ssl.key", "/home/thejan/WSO2/MyProject/CompleteTest/WithXPack/Elasticsearch/elasticsearch-5.4.3-node0/config/x-pack/certificates/node0/node0.key")
+                    .put("xpack.ssl.certificate", "/home/thejan/WSO2/MyProject/CompleteTest/WithXPack/Elasticsearch/elasticsearch-5.4.3-node0/config/x-pack/certificates/node0/node0.crt")
+                    .put("xpack.ssl.certificate_authorities", "/home/thejan/WSO2/MyProject/CompleteTest/WithXPack/Elasticsearch/elasticsearch-5.4.3-node0/config/x-pack/certificates/ca/ca.crt")
+                    .put("xpack.security.transport.ssl.enabled", "true");
+
             client = new PreBuiltXPackTransportClient(settingsBuilder.build());
 
         } else {
@@ -94,6 +112,29 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
             client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
 
+            // wrong cluster name provided or given cluster is down
+            if (client.connectedNodes().isEmpty()) {
+
+                log.error("Can not connect to any Elasticsearch nodes. Please give correct configurations " +
+                        "and run Elasticsearch.");
+
+            } else {
+
+                // checking the access privileges
+                IndexResponse responseIndex = client.prepareIndex("eidata", "data", "1")
+                        .setSource("{" +
+                                "\"test_att\":\"test\"" +
+                                "}", XContentType.JSON)
+                        .get();
+
+                DeleteResponse responseDel = client.prepareDelete("eidata", "data", "1").get();
+
+                startPublishing();
+                log.info("Elasticsearch mediation statistic publishing enabled");
+
+            }
+
+
         } catch (UnknownHostException e) {
 
             exp = e;
@@ -106,52 +147,17 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
             log.error("Invalid port number");
             client.close();
 
+        } catch (ElasticsearchSecurityException e) { // lacks access privileges
+
+            exp = e;
+            log.error("Wrong Elasticsearch access credentials.");
+            client.close();
+
         } catch (Exception e) {
 
             exp = e;
             log.error("Elasticsearch connection error");
             client.close();
-
-        } finally {
-
-            // Only if there is no exception, publisher thread will be started
-            if (exp == null) {
-
-                if (client.connectedNodes().isEmpty()) {
-
-                    log.error("No available Elasticsearch Nodes to connect. Please give correct configurations " +
-                            "and run Elasticsearch.");
-
-                } else {
-
-                    try {
-
-                        IndexResponse responseIndex = client.prepareIndex("eidata", "data", "1")
-                                .setSource("{" +
-                                        "\"test_att\":\"test\"" +
-                                        "}", XContentType.JSON)
-                                .get();
-
-                    } catch (ElasticsearchSecurityException e) {
-
-                        exp = e;
-                        log.error("Wrong Elasticsearch access credentials.");
-                        client.close();
-
-                    }
-
-                    if ( exp == null ) {
-
-                        DeleteResponse responseDel = client.prepareDelete("eidata", "data", "1").get();
-
-                        startPublishing();
-                        log.info("Elasticsearch mediation statistic publishing enabled");
-
-                    }
-
-                }
-
-            }
 
         }
 
@@ -191,6 +197,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
             try {
 
+                // if connectedNodes is not empty and publisher thread is not instantiated
                 if (publisherThread == null && !(client.connectedNodes().isEmpty())) {
 
                     startPublishing();

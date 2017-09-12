@@ -32,7 +32,7 @@ public class ElasticObserverConstants {
     public static final String OBSERVER_PORT = OBSERVER_ELEMENT + ".Port";
     public static final String QUEUE_SIZE = OBSERVER_ELEMENT + ".QueueSize";
     public static final String USERNAME = OBSERVER_ELEMENT + ".Username";
-    public static final String PASSWORD = OBSERVER_ELEMENT + ".Password";
+    public static final String PASSWORD_ALIAS = "Elastic.User.Password";
     public static final int DEFAULT_QUEUE_SIZE = 5000;
 
 }
