@@ -87,7 +87,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
         // If the alias is wrong or there is no password resolver returns the alias string again
         if (password.equals(ElasticObserverConstants.PASSWORD_ALIAS)) {
-            log.error("No password in Secure Vault for the alias Elastic.User.Password");
+            log.error("No password in Secure Vault for the alias " + ElasticObserverConstants.PASSWORD_ALIAS);
             password = null;
         }
 
@@ -101,7 +101,9 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
                     .put("xpack.ssl.key", sslKey)
                     .put("xpack.ssl.certificate", sslCert)
                     .put("xpack.ssl.certificate_authorities", sslCa)
-                    .put("xpack.security.transport.ssl.enabled", "true");
+                    .put("xpack.security.transport.ssl.enabled", "true")
+                    .put("request.headers.X-Found-Cluster", clusterName)
+                    .put("transport.tcp.compress", true);
 
         }
 
