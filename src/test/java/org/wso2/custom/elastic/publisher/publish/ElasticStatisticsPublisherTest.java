@@ -17,16 +17,13 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Queue;
 import java.util.SimpleTimeZone;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ElasticStatisticsPublisherTest extends TestCase {
 
     public void testProcess() throws Exception {
-
-        /*
-        Settings settings = Settings.builder().put("cluster.name", "localhost").build();
-
-        TransportClient client = new PreBuiltTransportClient(settings);
 
         PublishingFlow flow = new PublishingFlow();
 
@@ -36,45 +33,68 @@ public class ElasticStatisticsPublisherTest extends TestCase {
         PublishingEvent event2 = new PublishingEvent();
 
         event1.setComponentName("TestProxy");
-        event1.setComponentType("Proxy");
+        event1.setComponentType("Proxy Service");
         event1.setFaultCount(0);
         event1.setStartTime(System.currentTimeMillis());
 
-        event2.setComponentName("EventName");
-        event2.setComponentType("EventType");
-        event2.setFaultCount(0);
+        event2.setComponentName("TestSequence");
+        event2.setComponentType("Sequence");
+        event2.setFaultCount(1);
+        event2.setStartTime(System.currentTimeMillis());
 
         flow.addEvent(event1);
         flow.addEvent(event2);
 
-        Map<String, Object> mapping = new HashMap<String, Object>();
+        Map<String, Object> map1 = new HashMap<String, Object>();
+        Map<String, Object> map2 = new HashMap<String, Object>();
 
-        mapping.put("flowid", "abcd1234");
-        mapping.put("host", PublisherUtil.getHostAddress());
-        mapping.put("type", "Proxy");
-        mapping.put("name", "TestProxy");
+        // for event1
+        map1.put("flowid", "abcd1234");
+        map1.put("host", PublisherUtil.getHostAddress());
+        map1.put("type", "Proxy Service");
+        map1.put("name", "TestProxy");
 
-        long time = event1.getStartTime();
-        Date date = new Date(time);
+        long time1 = event1.getStartTime();
+        Date date1 = new Date(time1);
 
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        String formattedDate = dateFormat.format(date);
+        String formattedDate1 = dateFormat.format(date1);
 
         DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss.SSS");
-//        timeFormat.setTimeZone(new SimpleTimeZone(SimpleTimeZone.UTC_TIME, "UTC"));
-        String formattedTime = timeFormat.format(date);
+        timeFormat.setTimeZone(new SimpleTimeZone(SimpleTimeZone.UTC_TIME, "UTC"));
+        String formattedTime1 = timeFormat.format(date1);
 
-        String timestampElastic = formattedDate + "T" + formattedTime + "Z";
-        mapping.put("@timestamp", timestampElastic);
+        String timestampElastic1 = formattedDate1 + "T" + formattedTime1 + "Z";
+        map1.put("@timestamp", timestampElastic1);
 
-        mapping.put("success", true);
+        map1.put("success", true);
 
-        ObjectMapper objectMapper = new ObjectMapper();
+        // for event2
+        map2.put("flowid", "abcd1234");
+        map2.put("host", PublisherUtil.getHostAddress());
+        map2.put("type", "Sequence");
+        map2.put("name", "TestSequence");
 
-        String jsonString = objectMapper.writeValueAsString(mapping);
+        long time2 = event2.getStartTime();
+        Date date2 = new Date(time2);
 
-        Assert.assertEquals(jsonString, ElasticStatisticsPublisher.process(flow));
-        */
+        String formattedDate2 = dateFormat.format(date2);
+        String formattedTime2 = timeFormat.format(date2);
+
+        String timestampElastic2 = formattedDate2 + "T" + formattedTime2 + "Z";
+        map2.put("@timestamp", timestampElastic2);
+
+        map2.put("success", false);
+
+        Queue<Map<String, Object>> queue = new ConcurrentLinkedQueue<Map<String, Object>>();
+        queue.add(map1);
+        queue.add(map2);
+
+        ElasticStatisticsPublisher.process(flow);
+
+        Assert.assertTrue(map1.equals(ElasticStatisticsPublisher.getAllMappingsQueue().poll()) &&
+                map2.equals(ElasticStatisticsPublisher.getAllMappingsQueue().poll())
+        );
 
     }
 

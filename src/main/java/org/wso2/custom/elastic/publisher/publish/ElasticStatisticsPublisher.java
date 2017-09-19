@@ -43,7 +43,7 @@ public class ElasticStatisticsPublisher {
 
     private static final Log log = LogFactory.getLog(ElasticStatisticsPublisher.class);
 
-    // Queue to store all the Maps of data to be converted to jsons
+    // Queue to store all the Maps of data to be converted to json strings
     private static Queue<Map<String, Object>> allMappingsQueue = new ConcurrentLinkedQueue<Map<String, Object>>();
 
 
