@@ -54,9 +54,8 @@
                             org.wso2.custom.elastic.publisher.*
                         </Export-Package>
                         <Import-Package>
-                            org.wso2.carbon.das.messageflow.data.publish.*,
-                            org.apache.synapse.securevault.*,
-                            org.joda.time.*;version="2.9.5",
+                            org.wso2.carbon.das.messageflow.data.publisher.*,
+                            org.wso2.securevault.*,
                             org.apache.commons.logging; version="1.2.0",
                             org.apache.log4j.*; version="1.2.0",
                             *;resolution:=optional
@@ -67,9 +66,11 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.1</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <encoding>UTF-8</encoding>
+                    <source>1.7</source>
+                    <target>1.7</target>
                 </configuration>
             </plugin>
         </plugins>
@@ -132,8 +133,8 @@
         <fasterxml.jackson.version>2.6.1.wso2v1</fasterxml.jackson.version>
         <fasterxml.jackson.databind.version>2.6.1.wso2v3</fasterxml.jackson.databind.version>
         <junit.version>3.8.2</junit.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-
 
     <dependencies>
 
