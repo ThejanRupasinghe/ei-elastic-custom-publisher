@@ -44,7 +44,6 @@ public class PublisherThread extends Thread {
         while (!(shutdownRequested)) {
 
             if (ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty()) {
-
                 try {
                     // Sleep for 1 second if the queue is empty
                     Thread.sleep(1000);
@@ -52,16 +51,12 @@ public class PublisherThread extends Thread {
                     log.warn("Publisher Thread interrupted");
                     Thread.currentThread().interrupt();
                 }
-
             } else {
-
                 ObjectMapper objectMapper = new ObjectMapper();
 
                 ArrayList<String> jsonStringList = new ArrayList<String>();
 
-
                 if (client.connectedNodes().isEmpty()) {
-
                     log.error("No available Elasticsearch nodes to connect. Waiting for nodes... ");
 
                     try {
@@ -71,9 +66,7 @@ public class PublisherThread extends Thread {
                         log.warn("Publisher Thread interrupted");
                         Thread.currentThread().interrupt();
                     }
-
                 } else {
-
                     // While the map queue is not empty
                     while (!(ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty())) {
 
@@ -85,9 +78,7 @@ public class PublisherThread extends Thread {
                         } catch (JsonProcessingException e) {
                             log.error("Cannot convert to json");
                         }
-
                     }
-
                     // Publish the json string list
                     ElasticStatisticsPublisher.publish(jsonStringList, client);
                 }

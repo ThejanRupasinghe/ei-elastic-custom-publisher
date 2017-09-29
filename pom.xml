@@ -58,7 +58,10 @@
                             org.wso2.securevault.*,
                             org.apache.commons.logging; version="1.2.0",
                             org.apache.log4j.*; version="1.2.0",
-                            *;resolution:=optional
+                            org.wso2.carbon.base.*,
+                            org.apache.synapse.aspects.flow.statistics.publishing.*,
+                            org.wso2.carbon.das.data.publisher.util.*,
+                            com.fasterxml.jackson.databind.*
                         </Import-Package>
                     </instructions>
                 </configuration>
@@ -144,16 +147,17 @@
             <version>${elasticsearch.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.elasticsearch.client</groupId>
+            <artifactId>x-pack-transport</artifactId>
+            <version>${elasticsearch.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon.mediation</groupId>
             <artifactId>org.wso2.carbon.das.messageflow.data.publisher</artifactId>
             <version>4.6.21-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.elasticsearch.client</groupId>
-            <artifactId>x-pack-transport</artifactId>
-            <version>${elasticsearch.version}</version>
-        </dependency>
+
         <!--<dependency>-->
             <!--<groupId>commons-codec</groupId>-->
             <!--<artifactId>commons-codec</artifactId>-->

@@ -46,14 +46,12 @@ public class ElasticStatisticsPublisher {
     // Queue to store all the Maps of data to be converted to json strings
     private static Queue<Map<String, Object>> allMappingsQueue = new ConcurrentLinkedQueue<Map<String, Object>>();
 
-
     /**
      * Processes the PublishingFlow into a simple json format
      *
      * @param publishingFlow PublishingFlow object which contains the publishing events
      */
     public static void process(PublishingFlow publishingFlow) {
-
         // Takes message flow id and host
         String flowid = publishingFlow.getMessageFlowId();
         String host = PublisherUtil.getHostAddress();
@@ -61,7 +59,6 @@ public class ElasticStatisticsPublisher {
         ArrayList<PublishingEvent> events = publishingFlow.getEvents();
 
         for (PublishingEvent event : events) {
-
             String componentType = event.getComponentType();
             String componentName = event.getComponentName();
 
@@ -90,14 +87,11 @@ public class ElasticStatisticsPublisher {
                     } else {
                         mapping.put("success", true);
                     }
-
                     // Enqueue the Map to the queue
                     allMappingsQueue.add(mapping);
                 }
-
             }
         }
-
     }
 
     /**
@@ -107,10 +101,9 @@ public class ElasticStatisticsPublisher {
      * @param client      elasticsearch Transport client
      */
     public static void publish(List<String> jsonsToSend, TransportClient client) {
-
         try {
-
             BulkRequestBuilder bulkRequest = client.prepareBulk();
+
             for (String jsonString : jsonsToSend) {
                 bulkRequest.add(client.prepareIndex("eidata", "data")
                         .setSource(jsonString, XContentType.JSON)
@@ -118,29 +111,17 @@ public class ElasticStatisticsPublisher {
 
                 if (log.isDebugEnabled()) {
                     log.debug(jsonString);
-
                 }
             }
 
             bulkRequest.get();
-            /*
-            if (bulkResponse.hasFailures()) {
-                log.info("Failures");
-            }
-            */
-
         } catch (NoNodeAvailableException e) {
-
             log.error("No available Elasticsearch Nodes to connect. Please give correct configurations and" +
                     " run Elasticsearch.");
-
         } catch (ElasticsearchSecurityException e) {
-
             log.error("Elasticsearch user lacks access to write.");
             client.close();
-
         }
-
     }
 
     /**
@@ -150,7 +131,6 @@ public class ElasticStatisticsPublisher {
      * @return timeStamp formatted according to the Elasticsearch
      */
     private static String getFormattedDate(long time) {
-
         Date date = new Date(time);
 
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -161,7 +141,6 @@ public class ElasticStatisticsPublisher {
         String formattedTime = timeFormat.format(date);
 
         return formattedDate + "T" + formattedTime + "Z";
-
     }
 
     /**

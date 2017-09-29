@@ -58,12 +58,10 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     int queueSize = ElasticObserverConstants.DEFAULT_QUEUE_SIZE;
     Exception exp = null;
 
-
     /**
      * Instantiates the TransportClient as this class is instantiated
      */
     public ElasticMediationFlowObserver() {
-
         ServerConfiguration serverConf = ServerConfiguration.getInstance();
 
         // Takes configuration details form carbon.xml
@@ -72,39 +70,46 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         String portString = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_PORT);
         String queueSizeString = serverConf.getFirstProperty(ElasticObserverConstants.QUEUE_SIZE);
         String username = serverConf.getFirstProperty(ElasticObserverConstants.USERNAME);
+        String passwordInConfig = serverConf.getFirstProperty(ElasticObserverConstants.PASSWORD);
         String sslKey = serverConf.getFirstProperty(ElasticObserverConstants.SSL_KEY);
         String sslCert = serverConf.getFirstProperty(ElasticObserverConstants.SSL_CERT);
         String sslCa = serverConf.getFirstProperty(ElasticObserverConstants.SSL_CA);
 
-        // carbon.xml document element
-        Element element = serverConf.getDocumentElement();
-
-        // Creates Secret Resolver from carbon.xml document element
-        SecretResolver secretResolver = SecretResolverFactory.create(element, true);
-
-        // Resolves password using the defined alias
-        String password = secretResolver.resolve(ElasticObserverConstants.PASSWORD_ALIAS);
-
-        // If the alias is wrong or there is no password resolver returns the alias string again
-        if (password.equals(ElasticObserverConstants.PASSWORD_ALIAS)) {
-            log.error("No password in Secure Vault for the alias " + ElasticObserverConstants.PASSWORD_ALIAS);
-            password = null;
-        }
-
         // Elasticsearch settings object
         Settings.Builder settingsBuilder = Settings.builder()
-                .put("cluster.name", clusterName);
+                .put("cluster.name", clusterName)
+                .put("transport.tcp.compress", true);
 
-        if (username != null && password != null && sslKey != null && sslCert != null && sslCa != null) {
 
-            settingsBuilder.put("xpack.security.user", username + ":" + password)
-                    .put("xpack.ssl.key", sslKey)
-                    .put("xpack.ssl.certificate", sslCert)
-                    .put("xpack.ssl.certificate_authorities", sslCa)
-                    .put("xpack.security.transport.ssl.enabled", "true")
-                    .put("request.headers.X-Found-Cluster", clusterName)
-                    .put("transport.tcp.compress", true);
+        // If username is not null, Secure Vault password should be configured
+        if (username != null && passwordInConfig.equals("password")) {
+            // carbon.xml document element
+            Element element = serverConf.getDocumentElement();
 
+            // Creates Secret Resolver from carbon.xml document element
+            SecretResolver secretResolver = SecretResolverFactory.create(element, true);
+
+            // Resolves password using the defined alias
+            String password = secretResolver.resolve(ElasticObserverConstants.PASSWORD_ALIAS);
+
+            // If the alias is wrong or there is no password resolver returns the alias string again
+            if (password.equals(ElasticObserverConstants.PASSWORD_ALIAS)) {
+                log.error("No password in Secure Vault for the alias " + ElasticObserverConstants.PASSWORD_ALIAS);
+                password = null;
+            }
+
+            // Can use password without ssl
+            if (password != null) {
+                settingsBuilder.put("xpack.security.user", username + ":" + password)
+                        .put("request.headers.X-Found-Cluster", clusterName);
+
+                if (sslKey != null && sslCert != null && sslCa != null) {
+                    settingsBuilder.put("xpack.ssl.key", sslKey)
+                            .put("xpack.ssl.certificate", sslCert)
+                            .put("xpack.ssl.certificate_authorities", sslCa)
+                            .put("xpack.security.transport.ssl.enabled", "true");
+                }
+            }
         }
 
         client = new PreBuiltXPackTransportClient(settingsBuilder.build());
@@ -118,12 +123,9 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
             // wrong cluster name provided or given cluster is down
             if (client.connectedNodes().isEmpty()) {
-
-                log.error("Can not connect to any Elasticsearch nodes. Please give correct configurations " +
-                        "and run Elasticsearch.");
+                log.error("Can not connect to any Elasticsearch nodes. Please give correct configurations " + "and run Elasticsearch.");
 
             } else {
-
                 // checking the access privileges
                 IndexResponse responseIndex = client.prepareIndex("eidata", "data", "1")
                         .setSource("{" +
@@ -135,36 +137,24 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
                 startPublishing();
                 log.info("Elasticsearch mediation statistic publishing enabled");
-
             }
-
-
         } catch (UnknownHostException e) {
-
             exp = e;
-            log.error("Unknown Elasticsearch Host");
+            log.error("Unknown Elasticsearch Host",e);
             client.close();
-
         } catch (NumberFormatException e) {
-
             exp = e;
-            log.error("Invalid port number or queue size value");
+            log.error("Invalid port number or queue size value",e);
             client.close();
-
         } catch (ElasticsearchSecurityException e) { // lacks access privileges
-
             exp = e;
-            log.error("Wrong Elasticsearch access credentials.");
+            log.error("Wrong Elasticsearch access credentials.",e);
             client.close();
-
         } catch (Exception e) {
-
             exp = e;
-            log.error("Elasticsearch connection error");
+            log.error("Elasticsearch connection error",e);
             client.close();
-
         }
-
     }
 
 
@@ -173,7 +163,6 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
      */
     @Override
     public void destroy() {
-
         publisherThread.shutdown();
 
         if (client != null) {
@@ -183,7 +172,6 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         if (log.isDebugEnabled()) {
             log.debug("Shutting down the mediation statistics observer of Elasticsearch");
         }
-
     }
 
 
@@ -195,48 +183,28 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
      */
     @Override
     public void updateStatistics(PublishingFlow publishingFlow) {
-
-
         if ((exp == null)) {
-
             try {
-
                 // if connectedNodes is not empty and publisher thread is not instantiated
                 if (publisherThread == null && !(client.connectedNodes().isEmpty())) {
-
                     startPublishing();
-
                 }
 
                 // Statistics should only be processed if the queue size is not exceeded
-
                 if (ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize) {
-
                     if (publisherThread == null) {
-
                         ElasticStatisticsPublisher.process(publishingFlow);
-
                     } else {
-
                         if (!(publisherThread.getShutdown()) &&
                                 ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize) {
-
                             ElasticStatisticsPublisher.process(publishingFlow);
-
                         }
-
                     }
-
                 }
-
             } catch (Exception e) {
-
                 log.error("Failed to update statistics from Elasticsearch publisher", e);
-
             }
-
         }
-
     }
 
 
@@ -244,12 +212,9 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
      * Instantiates the publisher thread, passes the transport client and starts.
      */
     private void startPublishing() {
-
         publisherThread = new PublisherThread();
         publisherThread.setName("ElasticsearchPublisherThread");
         publisherThread.setClient(client);
         publisherThread.start();
-
     }
-
 }
