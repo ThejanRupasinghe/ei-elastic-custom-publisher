@@ -56,7 +56,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     private PublisherThread publisherThread = null;
 
     int queueSize = ElasticObserverConstants.DEFAULT_QUEUE_SIZE;
-    Exception exp = null;
+    boolean queueExceeded = false;
 
     /**
      * Instantiates the TransportClient as this class is instantiated
@@ -121,10 +121,11 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
             client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
 
-            // wrong cluster name provided or given cluster is down
+            // wrong cluster name provided, given cluster is down or wrong access credentials
             if (client.connectedNodes().isEmpty()) {
-                log.error("Can not connect to any Elasticsearch nodes. Please give correct configurations " + "and run Elasticsearch.");
-
+                log.error("Can not connect to any Elasticsearch nodes. Please give correct configurations, " +
+                        "run Elasticsearch and restart WSO2-EI.");
+                client.close();
             } else {
                 // checking the access privileges
                 IndexResponse responseIndex = client.prepareIndex("eidata", "data", "1")
@@ -139,19 +140,15 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
                 log.info("Elasticsearch mediation statistic publishing enabled");
             }
         } catch (UnknownHostException e) {
-            exp = e;
             log.error("Unknown Elasticsearch Host",e);
             client.close();
         } catch (NumberFormatException e) {
-            exp = e;
             log.error("Invalid port number or queue size value",e);
             client.close();
         } catch (ElasticsearchSecurityException e) { // lacks access privileges
-            exp = e;
-            log.error("Wrong Elasticsearch access credentials.",e);
+            log.error("Elasticsearch access credentials are wrong or lacks user privilages.",e);
             client.close();
         } catch (Exception e) {
-            exp = e;
             log.error("Elasticsearch connection error",e);
             client.close();
         }
@@ -183,26 +180,27 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
      */
     @Override
     public void updateStatistics(PublishingFlow publishingFlow) {
-        if ((exp == null)) {
-            try {
-                // if connectedNodes is not empty and publisher thread is not instantiated
-                if (publisherThread == null && !(client.connectedNodes().isEmpty())) {
-                    startPublishing();
+        if (publisherThread != null) {
+            if(queueExceeded){
+                if(ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize){
+                    log.info("Event queueing started.");
+                    queueExceeded = false;
                 }
+            }else{
+                if(ElasticStatisticsPublisher.getAllMappingsQueue().size() > queueSize){
+                    log.warn("Event queue size exceeded. Dropping incoming events.");
+                    queueExceeded = true;
+                }
+            }
 
-                // Statistics should only be processed if the queue size is not exceeded
-                if (ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize) {
-                    if (publisherThread == null) {
+            if(!queueExceeded){
+                try {
+                    if (!(publisherThread.getShutdown())) {
                         ElasticStatisticsPublisher.process(publishingFlow);
-                    } else {
-                        if (!(publisherThread.getShutdown()) &&
-                                ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize) {
-                            ElasticStatisticsPublisher.process(publishingFlow);
-                        }
                     }
+                } catch (Exception e) {
+                    log.error("Failed to update statistics from Elasticsearch publisher", e);
                 }
-            } catch (Exception e) {
-                log.error("Failed to update statistics from Elasticsearch publisher", e);
             }
         }
     }
