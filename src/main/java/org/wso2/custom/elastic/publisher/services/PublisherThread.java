@@ -37,12 +37,12 @@ public class PublisherThread extends Thread {
 
     private TransportClient client;
 
+    boolean isPublishing = true;
+
     @Override
     public void run() {
-
         // While not shutdown
         while (!(shutdownRequested)) {
-
             if (ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty()) {
                 try {
                     // Sleep for 1 second if the queue is empty
@@ -52,13 +52,19 @@ public class PublisherThread extends Thread {
                     Thread.currentThread().interrupt();
                 }
             } else {
-                ObjectMapper objectMapper = new ObjectMapper();
+                if(isPublishing){
+                    if (client.connectedNodes().isEmpty()) {
+                        log.info("No available Elasticsearch nodes to connect. Waiting for nodes... ");
+                        isPublishing = false;
+                    }
+                }else{
+                    if (!(client.connectedNodes().isEmpty())) {
+                        log.info("Elasticsearch node connected");
+                        isPublishing = true;
+                    }
+                }
 
-                ArrayList<String> jsonStringList = new ArrayList<String>();
-
-                if (client.connectedNodes().isEmpty()) {
-                    log.error("No available Elasticsearch nodes to connect. Waiting for nodes... ");
-
+                if (!(isPublishing)) {
                     try {
                         // Sleep for 5 seconds if no nodes are available
                         Thread.sleep(5000);
@@ -67,6 +73,10 @@ public class PublisherThread extends Thread {
                         Thread.currentThread().interrupt();
                     }
                 } else {
+                    ObjectMapper objectMapper = new ObjectMapper();
+
+                    ArrayList<String> jsonStringList = new ArrayList<String>();
+
                     // While the map queue is not empty
                     while (!(ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty())) {
 

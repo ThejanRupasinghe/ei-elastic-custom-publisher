@@ -56,7 +56,8 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     private PublisherThread publisherThread = null;
 
     int queueSize = ElasticObserverConstants.DEFAULT_QUEUE_SIZE;
-    boolean queueExceeded = false;
+
+    volatile boolean queueExceeded = false;
 
     /**
      * Instantiates the TransportClient as this class is instantiated
@@ -79,7 +80,6 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         Settings.Builder settingsBuilder = Settings.builder()
                 .put("cluster.name", clusterName)
                 .put("transport.tcp.compress", true);
-
 
         // If username is not null, Secure Vault password should be configured
         if (username != null && passwordInConfig.equals("password")) {
@@ -140,16 +140,16 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
                 log.info("Elasticsearch mediation statistic publishing enabled");
             }
         } catch (UnknownHostException e) {
-            log.error("Unknown Elasticsearch Host",e);
+            log.error("Unknown Elasticsearch Host", e);
             client.close();
         } catch (NumberFormatException e) {
-            log.error("Invalid port number or queue size value",e);
+            log.error("Invalid port number or queue size value", e);
             client.close();
         } catch (ElasticsearchSecurityException e) { // lacks access privileges
-            log.error("Elasticsearch access credentials are wrong or lacks user privilages.",e);
+            log.error("Elasticsearch access credentials are wrong or lacks user privilages.", e);
             client.close();
         } catch (Exception e) {
-            log.error("Elasticsearch connection error",e);
+            log.error("Elasticsearch connection error", e);
             client.close();
         }
     }
@@ -181,19 +181,19 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     @Override
     public void updateStatistics(PublishingFlow publishingFlow) {
         if (publisherThread != null) {
-            if(queueExceeded){
-                if(ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize){
+            if (queueExceeded) {
+                if (ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize) {
                     log.info("Event queueing started.");
                     queueExceeded = false;
                 }
-            }else{
-                if(ElasticStatisticsPublisher.getAllMappingsQueue().size() > queueSize){
+            } else {
+                if (ElasticStatisticsPublisher.getAllMappingsQueue().size() > queueSize) {
                     log.warn("Event queue size exceeded. Dropping incoming events.");
                     queueExceeded = true;
                 }
             }
 
-            if(!queueExceeded){
+            if (!queueExceeded) {
                 try {
                     if (!(publisherThread.getShutdown())) {
                         ElasticStatisticsPublisher.process(publishingFlow);
