@@ -36,6 +36,9 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+/**
+ * Processes the PublishingFlow into json strings and publishes to Elasticsearch using the TransportClient
+ */
 public class ElasticStatisticsPublisher {
 
     private ElasticStatisticsPublisher() {
@@ -52,6 +55,7 @@ public class ElasticStatisticsPublisher {
      * @param publishingFlow PublishingFlow object which contains the publishing events
      */
     public static void process(PublishingFlow publishingFlow) {
+
         // Takes message flow id and host
         String flowid = publishingFlow.getMessageFlowId();
         String host = PublisherUtil.getHostAddress();
@@ -68,7 +72,7 @@ public class ElasticStatisticsPublisher {
                     componentType.equals("Inbound EndPoint")) {
 
                 // Map to store details of the event
-                Map<String, Object> mapping = new HashMap<String, Object>();
+                Map<String, Object> mapping = new HashMap<>();
 
                 // Ignore events with theses ComponentNames
                 if (!(componentName.equals("API_INSEQ") || componentName.equals("API_OUTSEQ") ||
@@ -87,6 +91,7 @@ public class ElasticStatisticsPublisher {
                     } else {
                         mapping.put("success", true);
                     }
+
                     // Enqueue the Map to the queue
                     allMappingsQueue.add(mapping);
                 }
@@ -102,8 +107,8 @@ public class ElasticStatisticsPublisher {
      */
     public static void publish(List<String> jsonsToSend, TransportClient client) {
         try {
+            // Prepares the bulk request
             BulkRequestBuilder bulkRequest = client.prepareBulk();
-
             for (String jsonString : jsonsToSend) {
                 bulkRequest.add(client.prepareIndex("eidata", "data")
                         .setSource(jsonString, XContentType.JSON)
@@ -114,12 +119,14 @@ public class ElasticStatisticsPublisher {
                 }
             }
 
+            // Send the bulk request
             bulkRequest.get();
+
         } catch (NoNodeAvailableException e) {
             log.error("No available Elasticsearch Nodes to connect. Please give correct configurations and" +
-                    " run Elasticsearch.");
+                    " run Elasticsearch.", e);
         } catch (ElasticsearchSecurityException e) {
-            log.error("Elasticsearch user lacks access to write.");
+            log.error("Elasticsearch user lacks access to write.", e);
             client.close();
         }
     }

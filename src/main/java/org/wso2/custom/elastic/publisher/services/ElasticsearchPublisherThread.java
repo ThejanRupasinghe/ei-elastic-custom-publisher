@@ -28,49 +28,61 @@ import org.wso2.custom.elastic.publisher.publish.ElasticStatisticsPublisher;
 import java.util.ArrayList;
 import java.util.Map;
 
-public class PublisherThread extends Thread {
+/**
+ * This thread dequeues data maps from the allMappingsQueue, converts them to json strings and
+ * invokes publishing to Elasticsearch
+ */
+public class ElasticsearchPublisherThread extends Thread {
 
-    private static final Log log = LogFactory.getLog(PublisherThread.class);
+    private static final Log log = LogFactory.getLog(ElasticsearchPublisherThread.class);
 
     // To stop running
     private volatile boolean shutdownRequested = false;
 
     private TransportClient client;
 
+    // Whether nodes connected and can publish
     boolean isPublishing = true;
 
     @Override
     public void run() {
         // While not shutdown
-        while (!(shutdownRequested)) {
+        while (!shutdownRequested) {
+            // First check whether the event queue is empty
             if (ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty()) {
                 try {
                     // Sleep for 1 second if the queue is empty
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
-                    log.warn("Publisher Thread interrupted");
+                    log.warn("Publisher Thread interrupted", e);
                     Thread.currentThread().interrupt();
+                    throw new RuntimeException();
                 }
             } else {
                 if(isPublishing){
+                    // If nodes has connected before, check whether nodes are not connected now
                     if (client.connectedNodes().isEmpty()) {
+                        // Log only once
                         log.info("No available Elasticsearch nodes to connect. Waiting for nodes... ");
                         isPublishing = false;
                     }
                 }else{
+                    // If nodes has not connected before, check whether node are connected now
                     if (!(client.connectedNodes().isEmpty())) {
+                        // Log only once
                         log.info("Elasticsearch node connected");
                         isPublishing = true;
                     }
                 }
 
-                if (!(isPublishing)) {
+                if (!isPublishing) {
                     try {
                         // Sleep for 5 seconds if no nodes are available
                         Thread.sleep(5000);
                     } catch (InterruptedException e) {
-                        log.warn("Publisher Thread interrupted");
+                        log.warn("Publisher Thread interrupted", e);
                         Thread.currentThread().interrupt();
+                        throw new RuntimeException();
                     }
                 } else {
                     ObjectMapper objectMapper = new ObjectMapper();
@@ -78,7 +90,7 @@ public class PublisherThread extends Thread {
                     ArrayList<String> jsonStringList = new ArrayList<String>();
 
                     // While the map queue is not empty
-                    while (!(ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty())) {
+                    while (!ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty()) {
 
                         // Dequeue Map from the queue
                         Map<String, Object> map = ElasticStatisticsPublisher.getAllMappingsQueue().poll();
@@ -86,9 +98,10 @@ public class PublisherThread extends Thread {
                         try {
                             jsonStringList.add(objectMapper.writeValueAsString(map));
                         } catch (JsonProcessingException e) {
-                            log.error("Cannot convert to json");
+                            log.error("Cannot convert to json", e);
                         }
                     }
+
                     // Publish the json string list
                     ElasticStatisticsPublisher.publish(jsonStringList, client);
                 }
@@ -113,8 +126,10 @@ public class PublisherThread extends Thread {
         return shutdownRequested;
     }
 
+    /**
+     * @param transportClient configured TransportClient
+     */
     public void setClient(TransportClient transportClient) {
         client = transportClient;
     }
-
 }

@@ -20,6 +20,9 @@ package org.wso2.custom.elastic.publisher.util;
 
 import org.wso2.carbon.das.data.publisher.util.DASDataPublisherConstants;
 
+/**
+ * Stores needed constant values
+ */
 public class ElasticObserverConstants {
 
     private ElasticObserverConstants() {
@@ -27,16 +30,15 @@ public class ElasticObserverConstants {
 
     // Constant to get data from carbon.xml
     private static final String OBSERVER_ELEMENT = DASDataPublisherConstants.STAT_CONFIG_ELEMENT + ".ElasticObserver";
-    public static final String OBSERVER_HOST = OBSERVER_ELEMENT + ".Host";
-    public static final String OBSERVER_CLUSTER_NAME = OBSERVER_ELEMENT + ".ClusterName";
-    public static final String OBSERVER_PORT = OBSERVER_ELEMENT + ".Port";
-    public static final String QUEUE_SIZE = OBSERVER_ELEMENT + ".QueueSize";
-    public static final String USERNAME = OBSERVER_ELEMENT + ".Username";
-    public static final String PASSWORD = OBSERVER_ELEMENT + ".Password";
+    public static final String OBSERVER_HOST_CONFIG = OBSERVER_ELEMENT + ".Host";
+    public static final String OBSERVER_CLUSTER_NAME_CONFIG = OBSERVER_ELEMENT + ".ClusterName";
+    public static final String OBSERVER_PORT_CONFIG = OBSERVER_ELEMENT + ".Port";
+    public static final String QUEUE_SIZE_CONFIG = OBSERVER_ELEMENT + ".QueueSize";
+    public static final String USERNAME_CONFIG = OBSERVER_ELEMENT + ".Username";
+    public static final String PASSWORD_CONFIG = OBSERVER_ELEMENT + ".Password";
     public static final String PASSWORD_ALIAS = "Elastic.User.Password";
-    public static final String SSL_KEY = OBSERVER_ELEMENT + ".SslKey";
-    public static final String SSL_CERT = OBSERVER_ELEMENT + ".SslCertificate";
-    public static final String SSL_CA = OBSERVER_ELEMENT + ".SslCa";
+    public static final String SSL_KEY_CONFIG = OBSERVER_ELEMENT + ".SslKey";
+    public static final String SSL_CERT_CONFIG = OBSERVER_ELEMENT + ".SslCertificate";
+    public static final String SSL_CA_CONFIG = OBSERVER_ELEMENT + ".SslCa";
     public static final int DEFAULT_QUEUE_SIZE = 5000;
-
 }

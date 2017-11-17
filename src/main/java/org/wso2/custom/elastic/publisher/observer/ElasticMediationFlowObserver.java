@@ -22,8 +22,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.elasticsearch.ElasticsearchSecurityException;
-import org.elasticsearch.action.delete.DeleteResponse;
-import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
@@ -37,7 +35,7 @@ import org.wso2.securevault.SecretResolver;
 import org.wso2.securevault.SecretResolverFactory;
 
 import org.wso2.custom.elastic.publisher.publish.ElasticStatisticsPublisher;
-import org.wso2.custom.elastic.publisher.services.PublisherThread;
+import org.wso2.custom.elastic.publisher.services.ElasticsearchPublisherThread;
 import org.wso2.custom.elastic.publisher.util.ElasticObserverConstants;
 
 import org.w3c.dom.Element;
@@ -45,6 +43,10 @@ import org.w3c.dom.Element;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+/**
+ * This class is instantiated by MediationStatisticsComponent.
+ * Gets stored in MessageFlowObserverStore and updateStatistics() is notified by the MessageFlowReporterThread.
+ */
 public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
     private static final Log log = LogFactory.getLog(ElasticMediationFlowObserver.class);
@@ -53,11 +55,13 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     private TransportClient client = null;
 
     // Thread to publish json strings to Elasticsearch
-    private PublisherThread publisherThread = null;
+    private ElasticsearchPublisherThread publisherThread = null;
 
+    // Event buffering queue size = 5000
     int queueSize = ElasticObserverConstants.DEFAULT_QUEUE_SIZE;
 
-    volatile boolean queueExceeded = false;
+    // Whether the event queue exceeded or not, accessed by MessageFlowReporter threads
+    private volatile boolean queueExceeded = false;
 
     /**
      * Instantiates the TransportClient as this class is instantiated
@@ -66,36 +70,42 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         ServerConfiguration serverConf = ServerConfiguration.getInstance();
 
         // Takes configuration details form carbon.xml
-        String clusterName = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_CLUSTER_NAME);
-        String host = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_HOST);
-        String portString = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_PORT);
-        String queueSizeString = serverConf.getFirstProperty(ElasticObserverConstants.QUEUE_SIZE);
-        String username = serverConf.getFirstProperty(ElasticObserverConstants.USERNAME);
-        String passwordInConfig = serverConf.getFirstProperty(ElasticObserverConstants.PASSWORD);
-        String sslKey = serverConf.getFirstProperty(ElasticObserverConstants.SSL_KEY);
-        String sslCert = serverConf.getFirstProperty(ElasticObserverConstants.SSL_CERT);
-        String sslCa = serverConf.getFirstProperty(ElasticObserverConstants.SSL_CA);
+        String clusterName = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_CLUSTER_NAME_CONFIG);
+        String host = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_HOST_CONFIG);
+        String portString = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_PORT_CONFIG);
+        String queueSizeString = serverConf.getFirstProperty(ElasticObserverConstants.QUEUE_SIZE_CONFIG);
+        String username = serverConf.getFirstProperty(ElasticObserverConstants.USERNAME_CONFIG);
+        String passwordInConfig = serverConf.getFirstProperty(ElasticObserverConstants.PASSWORD_CONFIG);
+        String sslKey = serverConf.getFirstProperty(ElasticObserverConstants.SSL_KEY_CONFIG);
+        String sslCert = serverConf.getFirstProperty(ElasticObserverConstants.SSL_CERT_CONFIG);
+        String sslCa = serverConf.getFirstProperty(ElasticObserverConstants.SSL_CA_CONFIG);
 
-        // Elasticsearch settings object
+        // Elasticsearch settings builder object
         Settings.Builder settingsBuilder = Settings.builder()
                 .put("cluster.name", clusterName)
                 .put("transport.tcp.compress", true);
 
         // If username is not null, Secure Vault password should be configured
-        if (username != null && passwordInConfig.equals("password")) {
-            // carbon.xml document element
-            Element element = serverConf.getDocumentElement();
+        if (username != null) {
+            String password = null;
 
-            // Creates Secret Resolver from carbon.xml document element
-            SecretResolver secretResolver = SecretResolverFactory.create(element, true);
+            if("password".equals(passwordInConfig)){
+                // carbon.xml document element
+                Element element = serverConf.getDocumentElement();
 
-            // Resolves password using the defined alias
-            String password = secretResolver.resolve(ElasticObserverConstants.PASSWORD_ALIAS);
+                // Creates Secret Resolver from carbon.xml document element
+                SecretResolver secretResolver = SecretResolverFactory.create(element, true);
 
-            // If the alias is wrong or there is no password resolver returns the alias string again
-            if (password.equals(ElasticObserverConstants.PASSWORD_ALIAS)) {
-                log.error("No password in Secure Vault for the alias " + ElasticObserverConstants.PASSWORD_ALIAS);
-                password = null;
+                // Resolves password using the defined alias
+                password = secretResolver.resolve(ElasticObserverConstants.PASSWORD_ALIAS);
+
+                // If the alias is wrong and there is no password, resolver returns the alias string again
+                if (ElasticObserverConstants.PASSWORD_ALIAS.equals(password)) {
+                    log.error("No password in Secure Vault for the alias " + ElasticObserverConstants.PASSWORD_ALIAS);
+                    password = null;
+                }
+            }else {
+                password = passwordInConfig;
             }
 
             // Can use password without ssl
@@ -115,7 +125,6 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         client = new PreBuiltXPackTransportClient(settingsBuilder.build());
 
         try {
-
             int port = Integer.parseInt(portString);
             queueSize = Integer.parseInt(queueSizeString);
 
@@ -128,13 +137,13 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
                 client.close();
             } else {
                 // checking the access privileges
-                IndexResponse responseIndex = client.prepareIndex("eidata", "data", "1")
+                client.prepareIndex("eidata", "data", "1")
                         .setSource("{" +
                                 "\"test_att\":\"test\"" +
                                 "}", XContentType.JSON)
                         .get();
 
-                DeleteResponse responseDel = client.prepareDelete("eidata", "data", "1").get();
+                client.prepareDelete("eidata", "data", "1").get();
 
                 startPublishing();
                 log.info("Elasticsearch mediation statistic publishing enabled");
@@ -146,14 +155,13 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
             log.error("Invalid port number or queue size value", e);
             client.close();
         } catch (ElasticsearchSecurityException e) { // lacks access privileges
-            log.error("Elasticsearch access credentials are wrong or lacks user privilages.", e);
+            log.error("Wrong Elasticsearch access credentials.", e);
             client.close();
         } catch (Exception e) {
             log.error("Elasticsearch connection error", e);
             client.close();
         }
     }
-
 
     /**
      * TransportClient gets closed
@@ -171,7 +179,6 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         }
     }
 
-
     /**
      * Method is called when this observer is notified.
      * Invokes the process method considering about the queue size.
@@ -182,12 +189,16 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     public void updateStatistics(PublishingFlow publishingFlow) {
         if (publisherThread != null) {
             if (queueExceeded) {
+                // If the queue has exceeded before, check the queue is not exceeded now
                 if (ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize) {
+                    // Log only once
                     log.info("Event queueing started.");
                     queueExceeded = false;
                 }
             } else {
+                // If the queue has not exceeded before, check the queue is exceeded now
                 if (ElasticStatisticsPublisher.getAllMappingsQueue().size() > queueSize) {
+                    // Log only once
                     log.warn("Event queue size exceeded. Dropping incoming events.");
                     queueExceeded = true;
                 }
@@ -205,12 +216,11 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         }
     }
 
-
     /**
      * Instantiates the publisher thread, passes the transport client and starts.
      */
     private void startPublishing() {
-        publisherThread = new PublisherThread();
+        publisherThread = new ElasticsearchPublisherThread();
         publisherThread.setName("ElasticsearchPublisherThread");
         publisherThread.setClient(client);
         publisherThread.start();
