@@ -41,4 +41,6 @@ public class ElasticObserverConstants {
     public static final String SSL_CERT_CONFIG = OBSERVER_ELEMENT + ".SslCertificate";
     public static final String SSL_CA_CONFIG = OBSERVER_ELEMENT + ".SslCa";
     public static final int DEFAULT_QUEUE_SIZE = 5000;
+    
+    public static final int PUBLISHING_BULK_SIZE = 500; // TODO: 11/19/17 to be decided 
 }

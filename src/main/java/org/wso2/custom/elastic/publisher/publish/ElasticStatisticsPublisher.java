@@ -25,6 +25,7 @@ import org.apache.synapse.aspects.flow.statistics.publishing.PublishingEvent;
 import org.apache.synapse.aspects.flow.statistics.publishing.PublishingFlow;
 import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.client.transport.NoNodeAvailableException;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.wso2.carbon.das.data.publisher.util.PublisherUtil;
@@ -120,7 +121,8 @@ public class ElasticStatisticsPublisher {
             }
 
             // Send the bulk request
-            bulkRequest.get();
+            BulkResponse response = bulkRequest.get();
+            log.info(response.getTookInMillis());
 
         } catch (NoNodeAvailableException e) {
             log.error("No available Elasticsearch Nodes to connect. Please give correct configurations and" +

@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.elasticsearch.client.transport.TransportClient;
 import org.wso2.custom.elastic.publisher.publish.ElasticStatisticsPublisher;
+import org.wso2.custom.elastic.publisher.util.ElasticObserverConstants;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -59,14 +60,14 @@ public class ElasticsearchPublisherThread extends Thread {
                     throw new RuntimeException();
                 }
             } else {
-                if(isPublishing){
+                if (isPublishing) {
                     // If nodes has connected before, check whether nodes are not connected now
                     if (client.connectedNodes().isEmpty()) {
                         // Log only once
                         log.info("No available Elasticsearch nodes to connect. Waiting for nodes... ");
                         isPublishing = false;
                     }
-                }else{
+                } else {
                     // If nodes has not connected before, check whether node are connected now
                     if (!(client.connectedNodes().isEmpty())) {
                         // Log only once
@@ -87,23 +88,46 @@ public class ElasticsearchPublisherThread extends Thread {
                 } else {
                     ObjectMapper objectMapper = new ObjectMapper();
 
-                    ArrayList<String> jsonStringList = new ArrayList<String>();
+                    ArrayList<String> jsonStringList = new ArrayList<>();
 
-                    // While the map queue is not empty
-                    while (!ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty()) {
+//                    // While the map queue is not empty
+//                    while (!ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty()) {
+//
+//                        // Dequeue Map from the queue
+//                        Map<String, Object> map = ElasticStatisticsPublisher.getAllMappingsQueue().poll();
+//
+//                        try {
+//                            jsonStringList.add(objectMapper.writeValueAsString(map));
+//                        } catch (JsonProcessingException e) {
+//                            log.error("Cannot convert to json", e);
+//                        }
+//                    }
+
+                    long startTime = System.currentTimeMillis();
+
+                    // Publish a fixed size bulk
+                    while (ElasticObserverConstants.PUBLISHING_BULK_SIZE > jsonStringList.size()) {
 
                         // Dequeue Map from the queue
                         Map<String, Object> map = ElasticStatisticsPublisher.getAllMappingsQueue().poll();
 
-                        try {
-                            jsonStringList.add(objectMapper.writeValueAsString(map));
-                        } catch (JsonProcessingException e) {
-                            log.error("Cannot convert to json", e);
+                        if (map != null) {
+                            try {
+                                log.info(objectMapper.writeValueAsString(map));
+                                jsonStringList.add(objectMapper.writeValueAsString(map));
+                            } catch (JsonProcessingException e) {
+                                log.error("Cannot convert to json", e);
+                            }
+                        }
+
+                        if((System.currentTimeMillis()-startTime)>5000){
+                            break;
                         }
                     }
 
                     // Publish the json string list
                     ElasticStatisticsPublisher.publish(jsonStringList, client);
+                    log.info("published :" + jsonStringList.size() + "events");
                 }
             }
         }

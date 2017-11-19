@@ -87,9 +87,10 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
         // If username is not null, Secure Vault password should be configured
         if (username != null) {
-            String password = null;
+            String password;
 
-            if("password".equals(passwordInConfig)){
+            // TODO: 11/17/17 find from element the secure vault is configured or not 
+            if ("password".equals(passwordInConfig)) {
                 // carbon.xml document element
                 Element element = serverConf.getDocumentElement();
 
@@ -98,13 +99,14 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
                 // Resolves password using the defined alias
                 password = secretResolver.resolve(ElasticObserverConstants.PASSWORD_ALIAS);
+                log.info(password);
 
                 // If the alias is wrong and there is no password, resolver returns the alias string again
                 if (ElasticObserverConstants.PASSWORD_ALIAS.equals(password)) {
                     log.error("No password in Secure Vault for the alias " + ElasticObserverConstants.PASSWORD_ALIAS);
                     password = null;
                 }
-            }else {
+            } else {
                 password = passwordInConfig;
             }
 
@@ -127,6 +129,17 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         try {
             int port = Integer.parseInt(portString);
             queueSize = Integer.parseInt(queueSizeString);
+
+            if (log.isDebugEnabled()) {
+                log.debug("Cluster Name: " + clusterName);
+                log.debug("Host: " + host);
+                log.debug("Port: " + port);
+                log.debug("Buffer Size: " + queueSize);
+                log.debug("Username: " + username);
+                log.debug("SSL Key Path: " + sslKey);
+                log.debug("SSL Certificate Path: " + sslCert);
+                log.debug("SSL CA Cert Path: " + sslCa);
+            }
 
             client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
 
@@ -197,7 +210,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
                 }
             } else {
                 // If the queue has not exceeded before, check the queue is exceeded now
-                if (ElasticStatisticsPublisher.getAllMappingsQueue().size() > queueSize) {
+                if (ElasticStatisticsPublisher.getAllMappingsQueue().size() >= queueSize) {
                     // Log only once
                     log.warn("Event queue size exceeded. Dropping incoming events.");
                     queueExceeded = true;
