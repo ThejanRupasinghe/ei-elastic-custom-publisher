@@ -48,7 +48,7 @@ public class ElasticStatisticsPublisher {
     private static final Log log = LogFactory.getLog(ElasticStatisticsPublisher.class);
 
     // Queue to store all the Maps of data to be converted to json strings
-    private static Queue<Map<String, Object>> allMappingsQueue = new ConcurrentLinkedQueue<Map<String, Object>>();
+    private static Queue<Map<String, Object>> allMappingsQueue = new ConcurrentLinkedQueue<>();
 
     /**
      * Processes the PublishingFlow into a simple json format
@@ -122,7 +122,10 @@ public class ElasticStatisticsPublisher {
 
             // Send the bulk request
             BulkResponse response = bulkRequest.get();
-            log.info(response.getTookInMillis());
+
+            if(log.isDebugEnabled()){
+                log.debug("Last Bulk Request took " + response.getTookInMillis() + " milliseconds");
+            }
 
         } catch (NoNodeAvailableException e) {
             log.error("No available Elasticsearch Nodes to connect. Please give correct configurations and" +

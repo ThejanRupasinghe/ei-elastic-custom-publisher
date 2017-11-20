@@ -47,6 +47,10 @@ public class ElasticsearchPublisherThread extends Thread {
 
     @Override
     public void run() {
+        if(log.isDebugEnabled()){
+            log.debug("Elasticsearch publisher thread started.");
+        }
+
         // While not shutdown
         while (!shutdownRequested) {
             // First check whether the event queue is empty
@@ -113,21 +117,33 @@ public class ElasticsearchPublisherThread extends Thread {
 
                         if (map != null) {
                             try {
-                                log.info(objectMapper.writeValueAsString(map));
-                                jsonStringList.add(objectMapper.writeValueAsString(map));
+                                String jsonString = objectMapper.writeValueAsString(map);
+                                jsonStringList.add(jsonString);
+
+                                if(log.isDebugEnabled()){
+                                    log.debug("Added JSON String: " + jsonString);
+                                }
                             } catch (JsonProcessingException e) {
                                 log.error("Cannot convert to json", e);
                             }
                         }
 
+
                         if((System.currentTimeMillis()-startTime)>5000){
+                            if(log.isDebugEnabled()){
+                                log.debug("Polling time-out exceeded. Publishing collected events.(<500)");
+                            }
+
                             break;
                         }
                     }
 
                     // Publish the json string list
                     ElasticStatisticsPublisher.publish(jsonStringList, client);
-                    log.info("published :" + jsonStringList.size() + "events");
+
+                    if(log.isDebugEnabled()){
+                        log.info("Published :" + jsonStringList.size() + " events");
+                    }
                 }
             }
         }

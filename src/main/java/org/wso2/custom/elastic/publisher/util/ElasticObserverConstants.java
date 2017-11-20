@@ -36,11 +36,34 @@ public class ElasticObserverConstants {
     public static final String QUEUE_SIZE_CONFIG = OBSERVER_ELEMENT + ".QueueSize";
     public static final String USERNAME_CONFIG = OBSERVER_ELEMENT + ".Username";
     public static final String PASSWORD_CONFIG = OBSERVER_ELEMENT + ".Password";
-    public static final String PASSWORD_ALIAS = "Elastic.User.Password";
+    public static final String PASSWORD_ALIAS = "Elastic.User.Passwor";
     public static final String SSL_KEY_CONFIG = OBSERVER_ELEMENT + ".SslKey";
     public static final String SSL_CERT_CONFIG = OBSERVER_ELEMENT + ".SslCertificate";
     public static final String SSL_CA_CONFIG = OBSERVER_ELEMENT + ".SslCa";
     public static final int DEFAULT_QUEUE_SIZE = 5000;
     
-    public static final int PUBLISHING_BULK_SIZE = 500; // TODO: 11/19/17 to be decided 
+    public static final int PUBLISHING_BULK_SIZE = 500; // TODO: 11/19/17 to be decided
+
+
+    /*
+
+     <MediationFlowStatisticConfig>
+        <AnalyticPublishingDisable>true</AnalyticPublishingDisable>
+        <Observers>
+            org.wso2.custom.elastic.publisher.observer.ElasticMediationFlowObserver
+        </Observers>
+        <ElasticObserver>
+            <Host>localhost</Host>
+            <Port>9300</Port>
+            <ClusterName>elasticsearch</ClusterName>
+            <BufferSize>5000</BufferSize>
+            <Username>transport_client_user</Username>
+            <Password>changeme</Password>
+            <SslKey>/path/to/client.key</SslKey>
+            <SslCertificate>/path/to/client.crt</SslCertificate>
+            <SslCa>/path/to/ca.crt</SslCa>
+        </ElasticObserver>
+     </MediationFlowStatisticConfig>
+
+     */
 }

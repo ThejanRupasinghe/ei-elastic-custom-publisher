@@ -80,51 +80,9 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         String sslCert = serverConf.getFirstProperty(ElasticObserverConstants.SSL_CERT_CONFIG);
         String sslCa = serverConf.getFirstProperty(ElasticObserverConstants.SSL_CA_CONFIG);
 
-        // Elasticsearch settings builder object
-        Settings.Builder settingsBuilder = Settings.builder()
-                .put("cluster.name", clusterName)
-                .put("transport.tcp.compress", true);
-
-        // If username is not null, Secure Vault password should be configured
-        if (username != null) {
-            String password;
-
-            // TODO: 11/17/17 find from element the secure vault is configured or not 
-            if ("password".equals(passwordInConfig)) {
-                // carbon.xml document element
-                Element element = serverConf.getDocumentElement();
-
-                // Creates Secret Resolver from carbon.xml document element
-                SecretResolver secretResolver = SecretResolverFactory.create(element, true);
-
-                // Resolves password using the defined alias
-                password = secretResolver.resolve(ElasticObserverConstants.PASSWORD_ALIAS);
-                log.info(password);
-
-                // If the alias is wrong and there is no password, resolver returns the alias string again
-                if (ElasticObserverConstants.PASSWORD_ALIAS.equals(password)) {
-                    log.error("No password in Secure Vault for the alias " + ElasticObserverConstants.PASSWORD_ALIAS);
-                    password = null;
-                }
-            } else {
-                password = passwordInConfig;
-            }
-
-            // Can use password without ssl
-            if (password != null) {
-                settingsBuilder.put("xpack.security.user", username + ":" + password)
-                        .put("request.headers.X-Found-Cluster", clusterName);
-
-                if (sslKey != null && sslCert != null && sslCa != null) {
-                    settingsBuilder.put("xpack.ssl.key", sslKey)
-                            .put("xpack.ssl.certificate", sslCert)
-                            .put("xpack.ssl.certificate_authorities", sslCa)
-                            .put("xpack.security.transport.ssl.enabled", "true");
-                }
-            }
+        if (log.isDebugEnabled()) {
+            log.debug("Configurations taken from carbon.xml.");
         }
-
-        client = new PreBuiltXPackTransportClient(settingsBuilder.build());
 
         try {
             int port = Integer.parseInt(portString);
@@ -141,13 +99,86 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
                 log.debug("SSL CA Cert Path: " + sslCa);
             }
 
+            // Elasticsearch settings builder object
+            Settings.Builder settingsBuilder = Settings.builder()
+                    .put("cluster.name", clusterName)
+                    .put("transport.tcp.compress", true);
+
+            // If username is not null; password can be in plain or Secure Vault
+            if (username != null) {
+                String password;
+
+                // TODO: 11/17/17 find from element the secure vault is configured or not
+                if ("password".equals(passwordInConfig)) {
+                    // carbon.xml document element
+                    Element element = serverConf.getDocumentElement();
+
+                    // Creates Secret Resolver from carbon.xml document element
+                    SecretResolver secretResolver = SecretResolverFactory.create(element, true);
+
+                    // Resolves password using the defined alias
+                    password = secretResolver.resolve(ElasticObserverConstants.PASSWORD_ALIAS);
+
+                    // If the alias is wrong and there is no password, resolver returns the alias string again
+                    if (ElasticObserverConstants.PASSWORD_ALIAS.equals(password)) {
+                        log.error("No password in Secure Vault for the alias " + ElasticObserverConstants.PASSWORD_ALIAS);
+                        password = null;
+                    } else {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Password resolved from Secure Vault.");
+                        }
+                    }
+                } else {
+                    password = passwordInConfig;
+                    if (log.isDebugEnabled()) {
+                        log.debug("Password taken from carbon.xml");
+                    }
+                }
+
+                // Can use password without ssl
+                if (password != null) {
+                    settingsBuilder.put("xpack.security.user", username + ":" + password)
+                            .put("request.headers.X-Found-Cluster", clusterName);
+
+                    if (sslKey != null && sslCert != null && sslCa != null) {
+                        settingsBuilder.put("xpack.ssl.key", sslKey)
+                                .put("xpack.ssl.certificate", sslCert)
+                                .put("xpack.ssl.certificate_authorities", sslCa)
+                                .put("xpack.security.transport.ssl.enabled", "true");
+
+                        if (log.isDebugEnabled()) {
+                            log.debug("SSL keys and certificates added.");
+                        }
+                    } else {
+                        if (log.isDebugEnabled()) {
+                            log.debug("SSL is not configured.");
+                        }
+                    }
+                }
+            }
+
+            client = new PreBuiltXPackTransportClient(settingsBuilder.build());
+
+            if (log.isDebugEnabled()) {
+                log.debug("Transport Client is built.");
+            }
+
             client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
+
+            if (log.isDebugEnabled()) {
+                log.debug("Host & Port added to the client.");
+            }
 
             // wrong cluster name provided, given cluster is down or wrong access credentials
             if (client.connectedNodes().isEmpty()) {
                 log.error("Can not connect to any Elasticsearch nodes. Please give correct configurations, " +
                         "run Elasticsearch and restart WSO2-EI.");
                 client.close();
+
+                if (log.isDebugEnabled()) {
+                    log.debug("No nodes connected. Reasons: Wrong cluster name/ Given cluster is down/ " +
+                            "Wrong access credentials");
+                }
             } else {
                 // checking the access privileges
                 client.prepareIndex("eidata", "data", "1")
@@ -158,20 +189,24 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
                 client.prepareDelete("eidata", "data", "1").get();
 
+                if (log.isDebugEnabled()) {
+                    log.debug("Access privileges for given user is sufficient.");
+                }
+
                 startPublishing();
-                log.info("Elasticsearch mediation statistic publishing enabled");
+                log.info("Elasticsearch mediation statistic publishing enabled.");
             }
         } catch (UnknownHostException e) {
-            log.error("Unknown Elasticsearch Host", e);
+            log.error("Unknown Elasticsearch Host.", e);
             client.close();
         } catch (NumberFormatException e) {
-            log.error("Invalid port number or queue size value", e);
+            log.error("Invalid port number or queue size value.", e);
             client.close();
         } catch (ElasticsearchSecurityException e) { // lacks access privileges
-            log.error("Wrong Elasticsearch access credentials.", e);
+            log.error("Elasticsearch user credentials lacks access privileges.", e);
             client.close();
         } catch (Exception e) {
-            log.error("Elasticsearch connection error", e);
+            log.error("Elasticsearch connection error.", e);
             client.close();
         }
     }
@@ -205,14 +240,14 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
                 // If the queue has exceeded before, check the queue is not exceeded now
                 if (ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize) {
                     // Log only once
-                    log.info("Event queueing started.");
+                    log.info("Event buffering started.");
                     queueExceeded = false;
                 }
             } else {
                 // If the queue has not exceeded before, check the queue is exceeded now
                 if (ElasticStatisticsPublisher.getAllMappingsQueue().size() >= queueSize) {
                     // Log only once
-                    log.warn("Event queue size exceeded. Dropping incoming events.");
+                    log.warn("Maximum buffer size reached. Dropping incoming events.");
                     queueExceeded = true;
                 }
             }
