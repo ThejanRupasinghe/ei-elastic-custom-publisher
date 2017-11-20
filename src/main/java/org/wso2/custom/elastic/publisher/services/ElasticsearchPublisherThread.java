@@ -24,7 +24,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.elasticsearch.client.transport.TransportClient;
 import org.wso2.custom.elastic.publisher.publish.ElasticStatisticsPublisher;
-import org.wso2.custom.elastic.publisher.util.ElasticObserverConstants;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -41,13 +40,34 @@ public class ElasticsearchPublisherThread extends Thread {
     private volatile boolean shutdownRequested = false;
 
     private TransportClient client;
+    private int bulkSize;
+    private long bulkTimeOut;
+    private long bufferEmptySleep;
+    private long noNodesSleep;
 
     // Whether nodes connected and can publish
     boolean isPublishing = true;
 
+    /**
+     * This adds the following configurable parameters.
+     *
+     * @param transportClient  configured transport client object
+     * @param bulkSize         maximum size of the bulk to be published at a time
+     * @param bulkTimeOut
+     * @param bufferEmptySleep thread sleep time when the event buffer is empty
+     * @param noNodesSleep     thread sleep time when the Elasticsearch cluster is down
+     */
+    public void init(TransportClient transportClient, int bulkSize, long bulkTimeOut, long bufferEmptySleep, long noNodesSleep) {
+        this.client = transportClient;
+        this.bulkSize = bulkSize;
+        this.bulkTimeOut = bulkTimeOut;
+        this.bufferEmptySleep = bufferEmptySleep;
+        this.noNodesSleep = noNodesSleep;
+    }
+
     @Override
     public void run() {
-        if(log.isDebugEnabled()){
+        if (log.isDebugEnabled()) {
             log.debug("Elasticsearch publisher thread started.");
         }
 
@@ -57,7 +77,7 @@ public class ElasticsearchPublisherThread extends Thread {
             if (ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty()) {
                 try {
                     // Sleep for 1 second if the queue is empty
-                    Thread.sleep(1000);
+                    Thread.sleep(bufferEmptySleep);
                 } catch (InterruptedException e) {
                     log.warn("Publisher Thread interrupted", e);
                     Thread.currentThread().interrupt();
@@ -83,7 +103,7 @@ public class ElasticsearchPublisherThread extends Thread {
                 if (!isPublishing) {
                     try {
                         // Sleep for 5 seconds if no nodes are available
-                        Thread.sleep(5000);
+                        Thread.sleep(noNodesSleep);
                     } catch (InterruptedException e) {
                         log.warn("Publisher Thread interrupted", e);
                         Thread.currentThread().interrupt();
@@ -91,36 +111,24 @@ public class ElasticsearchPublisherThread extends Thread {
                     }
                 } else {
                     ObjectMapper objectMapper = new ObjectMapper();
-
                     ArrayList<String> jsonStringList = new ArrayList<>();
 
-//                    // While the map queue is not empty
-//                    while (!ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty()) {
-//
-//                        // Dequeue Map from the queue
-//                        Map<String, Object> map = ElasticStatisticsPublisher.getAllMappingsQueue().poll();
-//
-//                        try {
-//                            jsonStringList.add(objectMapper.writeValueAsString(map));
-//                        } catch (JsonProcessingException e) {
-//                            log.error("Cannot convert to json", e);
-//                        }
-//                    }
-
+                    // Entering time to the below while loop, to count the time out
                     long startTime = System.currentTimeMillis();
 
-                    // Publish a fixed size bulk
-                    while (ElasticObserverConstants.PUBLISHING_BULK_SIZE > jsonStringList.size()) {
-
+                    // This while loop is collecting maps from the buffering queue until the maximum
+                    // bulk size is reached.
+                    while (bulkSize > jsonStringList.size()) {
                         // Dequeue Map from the queue
                         Map<String, Object> map = ElasticStatisticsPublisher.getAllMappingsQueue().poll();
 
+                        // Polling from the queue gives null after the queue is empty.
                         if (map != null) {
                             try {
                                 String jsonString = objectMapper.writeValueAsString(map);
                                 jsonStringList.add(jsonString);
 
-                                if(log.isDebugEnabled()){
+                                if (log.isDebugEnabled()) {
                                     log.debug("Added JSON String: " + jsonString);
                                 }
                             } catch (JsonProcessingException e) {
@@ -128,12 +136,14 @@ public class ElasticsearchPublisherThread extends Thread {
                             }
                         }
 
-
-                        if((System.currentTimeMillis()-startTime)>5000){
-                            if(log.isDebugEnabled()){
+                        /*
+                        If the buffering queue has fewer events than the maximum size of the bulk, the loop will not
+                        stop. So when the time out is reached collected bulk will get published.
+                          */
+                        if ((System.currentTimeMillis() - startTime) > bulkTimeOut) {
+                            if (log.isDebugEnabled()) {
                                 log.debug("Polling time-out exceeded. Publishing collected events.(<500)");
                             }
-
                             break;
                         }
                     }
@@ -141,7 +151,7 @@ public class ElasticsearchPublisherThread extends Thread {
                     // Publish the json string list
                     ElasticStatisticsPublisher.publish(jsonStringList, client);
 
-                    if(log.isDebugEnabled()){
+                    if (log.isDebugEnabled()) {
                         log.info("Published :" + jsonStringList.size() + " events");
                     }
                 }
@@ -164,12 +174,5 @@ public class ElasticsearchPublisherThread extends Thread {
      */
     public boolean getShutdown() {
         return shutdownRequested;
-    }
-
-    /**
-     * @param transportClient configured TransportClient
-     */
-    public void setClient(TransportClient transportClient) {
-        client = transportClient;
     }
 }

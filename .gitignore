@@ -1,3 +1,4 @@
 .idea/
 target/
 *.iml
+/org.wso2.custom.elastic.publisher.iml

@@ -58,10 +58,22 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     private ElasticsearchPublisherThread publisherThread = null;
 
     // Event buffering queue size = 5000
-    int queueSize = ElasticObserverConstants.DEFAULT_QUEUE_SIZE;
+    int bufferSize = ElasticObserverConstants.DEFAULT_BUFFER_SIZE;
+
+    // Size of the event publishing bulk = 500
+    int bulkSize = ElasticObserverConstants.DEFAULT_PUBLISHING_BULK_SIZE;
+
+    // Time out for collecting configured fixed size bulk = 5000
+    long bulkTimeOut = ElasticObserverConstants.DEFAULT_BULK_COLLECTING_TIMEOUT;
+
+    // PublisherThread sleep time when the buffer is empty = 1000 (in millis)
+    long bufferEmptySleep = ElasticObserverConstants.DEFAULT_BUFFER_EMPTY_SLEEP_TIME;
+
+    // PublisherThread sleep time when the Elasticsearch server is down = 5000 (in millis)
+    long noNodesSleep = ElasticObserverConstants.DEFAULT_NO_NODES_SLEEP_TIME;
 
     // Whether the event queue exceeded or not, accessed by MessageFlowReporter threads
-    private volatile boolean queueExceeded = false;
+    private volatile boolean bufferExceeded = false;
 
     /**
      * Instantiates the TransportClient as this class is instantiated
@@ -70,10 +82,14 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
         ServerConfiguration serverConf = ServerConfiguration.getInstance();
 
         // Takes configuration details form carbon.xml
-        String clusterName = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_CLUSTER_NAME_CONFIG);
-        String host = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_HOST_CONFIG);
-        String portString = serverConf.getFirstProperty(ElasticObserverConstants.OBSERVER_PORT_CONFIG);
-        String queueSizeString = serverConf.getFirstProperty(ElasticObserverConstants.QUEUE_SIZE_CONFIG);
+        String clusterName = serverConf.getFirstProperty(ElasticObserverConstants.CLUSTER_NAME_CONFIG);
+        String host = serverConf.getFirstProperty(ElasticObserverConstants.HOST_CONFIG);
+        String portString = serverConf.getFirstProperty(ElasticObserverConstants.PORT_CONFIG);
+        String queueSizeString = serverConf.getFirstProperty(ElasticObserverConstants.BUFFER_SIZE_CONFIG);
+        String bulkSizeString = serverConf.getFirstProperty(ElasticObserverConstants.BULK_SIZE_CONFIG);
+        String bulkCollectingTimeOutString = serverConf.getFirstProperty(ElasticObserverConstants.BULK_COLLECTING_TIME_OUT_CONFIG);
+        String bufferEmptySleepString = serverConf.getFirstProperty(ElasticObserverConstants.BUFFER_EMPTY_SLEEP_TIME_CONFIG);
+        String noNodesSleepString = serverConf.getFirstProperty(ElasticObserverConstants.NO_NODES_SLEEP_TIME_CONFIG);
         String username = serverConf.getFirstProperty(ElasticObserverConstants.USERNAME_CONFIG);
         String passwordInConfig = serverConf.getFirstProperty(ElasticObserverConstants.PASSWORD_CONFIG);
         String sslKey = serverConf.getFirstProperty(ElasticObserverConstants.SSL_KEY_CONFIG);
@@ -86,13 +102,17 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
         try {
             int port = Integer.parseInt(portString);
-            queueSize = Integer.parseInt(queueSizeString);
+            bufferSize = Integer.parseInt(queueSizeString);
+            bulkSize = Integer.parseInt(bulkSizeString);
+            bulkTimeOut = Integer.parseInt(bulkCollectingTimeOutString);
+            bufferEmptySleep = Integer.parseInt(bufferEmptySleepString);
+            noNodesSleep = Integer.parseInt(noNodesSleepString);
 
             if (log.isDebugEnabled()) {
                 log.debug("Cluster Name: " + clusterName);
                 log.debug("Host: " + host);
                 log.debug("Port: " + port);
-                log.debug("Buffer Size: " + queueSize);
+                log.debug("Buffer Size: " + bufferSize);
                 log.debug("Username: " + username);
                 log.debug("SSL Key Path: " + sslKey);
                 log.debug("SSL Certificate Path: " + sslCert);
@@ -105,7 +125,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
                     .put("transport.tcp.compress", true);
 
             // If username is not null; password can be in plain or Secure Vault
-            if (username != null) {
+            if (username != null && passwordInConfig != null) {
                 String password;
 
                 // TODO: 11/17/17 find from element the secure vault is configured or not
@@ -169,7 +189,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
                 log.debug("Host & Port added to the client.");
             }
 
-            // wrong cluster name provided, given cluster is down or wrong access credentials
+            // Wrong cluster name provided or given cluster is down or wrong access credentials
             if (client.connectedNodes().isEmpty()) {
                 log.error("Can not connect to any Elasticsearch nodes. Please give correct configurations, " +
                         "run Elasticsearch and restart WSO2-EI.");
@@ -180,7 +200,12 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
                             "Wrong access credentials");
                 }
             } else {
-                // checking the access privileges
+                /*
+                    Client needs access rights to read and write to Elasticsearch cluster as described in the article.
+                    If the given user credential has no access to write, it only can be identified when the first bulk
+                    of events are published.
+                    So, to check the access privileges before hand, here put a test json string and delete it.
+                */
                 client.prepareIndex("eidata", "data", "1")
                         .setSource("{" +
                                 "\"test_att\":\"test\"" +
@@ -200,7 +225,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
             log.error("Unknown Elasticsearch Host.", e);
             client.close();
         } catch (NumberFormatException e) {
-            log.error("Invalid port number or queue size value.", e);
+            log.error("Invalid port number, queue size or time value.", e);
             client.close();
         } catch (ElasticsearchSecurityException e) { // lacks access privileges
             log.error("Elasticsearch user credentials lacks access privileges.", e);
@@ -236,23 +261,23 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     @Override
     public void updateStatistics(PublishingFlow publishingFlow) {
         if (publisherThread != null) {
-            if (queueExceeded) {
+            if (bufferExceeded) {
                 // If the queue has exceeded before, check the queue is not exceeded now
-                if (ElasticStatisticsPublisher.getAllMappingsQueue().size() < queueSize) {
+                if (ElasticStatisticsPublisher.getAllMappingsQueue().size() < bufferSize) {
                     // Log only once
                     log.info("Event buffering started.");
-                    queueExceeded = false;
+                    bufferExceeded = false;
                 }
             } else {
                 // If the queue has not exceeded before, check the queue is exceeded now
-                if (ElasticStatisticsPublisher.getAllMappingsQueue().size() >= queueSize) {
+                if (ElasticStatisticsPublisher.getAllMappingsQueue().size() >= bufferSize) {
                     // Log only once
                     log.warn("Maximum buffer size reached. Dropping incoming events.");
-                    queueExceeded = true;
+                    bufferExceeded = true;
                 }
             }
 
-            if (!queueExceeded) {
+            if (!bufferExceeded) {
                 try {
                     if (!(publisherThread.getShutdown())) {
                         ElasticStatisticsPublisher.process(publishingFlow);
@@ -270,7 +295,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
     private void startPublishing() {
         publisherThread = new ElasticsearchPublisherThread();
         publisherThread.setName("ElasticsearchPublisherThread");
-        publisherThread.setClient(client);
+        publisherThread.init(client, bulkSize, bulkTimeOut, bufferEmptySleep, noNodesSleep);
         publisherThread.start();
     }
 }

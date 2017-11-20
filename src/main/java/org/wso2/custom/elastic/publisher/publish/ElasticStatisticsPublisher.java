@@ -31,6 +31,7 @@ import org.elasticsearch.common.xcontent.XContentType;
 import org.wso2.carbon.das.data.publisher.util.PublisherUtil;
 
 import org.elasticsearch.client.transport.TransportClient;
+import org.wso2.custom.elastic.publisher.util.ElasticObserverConstants;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -47,7 +48,10 @@ public class ElasticStatisticsPublisher {
 
     private static final Log log = LogFactory.getLog(ElasticStatisticsPublisher.class);
 
-    // Queue to store all the Maps of data to be converted to json strings
+    /*
+    Queue to store all the Maps of data to be converted to json strings
+    This works as the event Buffer to store events before publishing. Size is configured through carbon.xml
+     */
     private static Queue<Map<String, Object>> allMappingsQueue = new ConcurrentLinkedQueue<>();
 
     /**
@@ -68,9 +72,11 @@ public class ElasticStatisticsPublisher {
             String componentName = event.getComponentName();
 
             // Checks each event for one of these five services
-            if (componentType.equals("Sequence") || componentType.equals("Endpoint") ||
-                    componentType.equals("API") || componentType.equals("Proxy Service") ||
-                    componentType.equals("Inbound EndPoint")) {
+            if (componentType.equals(ElasticObserverConstants.SEQUENCE) ||
+                    componentType.equals(ElasticObserverConstants.ENDPOINT) ||
+                    componentType.equals(ElasticObserverConstants.API) ||
+                    componentType.equals(ElasticObserverConstants.PROXY_SERVICE) ||
+                    componentType.equals(ElasticObserverConstants.INBOUND_ENDPOINT)) {
 
                 // Map to store details of the event
                 Map<String, Object> mapping = new HashMap<>();
@@ -114,19 +120,14 @@ public class ElasticStatisticsPublisher {
                 bulkRequest.add(client.prepareIndex("eidata", "data")
                         .setSource(jsonString, XContentType.JSON)
                 );
-
-                if (log.isDebugEnabled()) {
-                    log.debug(jsonString);
-                }
             }
 
             // Send the bulk request
             BulkResponse response = bulkRequest.get();
 
-            if(log.isDebugEnabled()){
+            if (log.isDebugEnabled()) {
                 log.debug("Last Bulk Request took " + response.getTookInMillis() + " milliseconds");
             }
-
         } catch (NoNodeAvailableException e) {
             log.error("No available Elasticsearch Nodes to connect. Please give correct configurations and" +
                     " run Elasticsearch.", e);
