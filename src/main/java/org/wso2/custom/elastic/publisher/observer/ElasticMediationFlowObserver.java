@@ -102,6 +102,7 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
 
         try {
             int port = Integer.parseInt(portString);
+            // TODO: 11/20/17 if null keep the default values 
             bufferSize = Integer.parseInt(queueSizeString);
             bulkSize = Integer.parseInt(bulkSizeString);
             bulkTimeOut = Integer.parseInt(bulkCollectingTimeOutString);

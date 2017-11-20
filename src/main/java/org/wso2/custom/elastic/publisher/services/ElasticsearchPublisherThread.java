@@ -49,11 +49,11 @@ public class ElasticsearchPublisherThread extends Thread {
     boolean isPublishing = true;
 
     /**
-     * This adds the following configurable parameters.
+     * This adds the following configurable values to the thread.
      *
      * @param transportClient  configured transport client object
      * @param bulkSize         maximum size of the bulk to be published at a time
-     * @param bulkTimeOut
+     * @param bulkTimeOut      time out for bulk collecting from the buffer
      * @param bufferEmptySleep thread sleep time when the event buffer is empty
      * @param noNodesSleep     thread sleep time when the Elasticsearch cluster is down
      */
@@ -73,10 +73,10 @@ public class ElasticsearchPublisherThread extends Thread {
 
         // While not shutdown
         while (!shutdownRequested) {
-            // First check whether the event queue is empty
+            // First check whether the event queue/buffer is empty
             if (ElasticStatisticsPublisher.getAllMappingsQueue().isEmpty()) {
                 try {
-                    // Sleep for 1 second if the queue is empty
+                    // Sleep if the queue/buffer is empty (default 1000 millis)
                     Thread.sleep(bufferEmptySleep);
                 } catch (InterruptedException e) {
                     log.warn("Publisher Thread interrupted", e);
@@ -102,7 +102,7 @@ public class ElasticsearchPublisherThread extends Thread {
 
                 if (!isPublishing) {
                     try {
-                        // Sleep for 5 seconds if no nodes are available
+                        // Sleep if no nodes are available (default 5000 millis)
                         Thread.sleep(noNodesSleep);
                     } catch (InterruptedException e) {
                         log.warn("Publisher Thread interrupted", e);
@@ -152,7 +152,7 @@ public class ElasticsearchPublisherThread extends Thread {
                     ElasticStatisticsPublisher.publish(jsonStringList, client);
 
                     if (log.isDebugEnabled()) {
-                        log.info("Published :" + jsonStringList.size() + " events");
+                        log.debug("Published :" + jsonStringList.size() + " events");
                     }
                 }
             }

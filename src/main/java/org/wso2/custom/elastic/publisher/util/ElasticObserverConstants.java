@@ -41,7 +41,7 @@ public class ElasticObserverConstants {
             <ClusterName>elasticsearch</ClusterName>    CLUSTER_NAME_CONFIG
             <BufferSize>5000</BufferSize>   BUFFER_SIZE_CONFIG
             <BulkSize>500</BulkSize>    BULK_SIZE_CONFIG
-            <BulkCollectingTimeOut>5000</BulkCollectingTimeOut>
+            <BulkCollectingTimeOut>5000</BulkCollectingTimeOut> BULK_COLLECTING_TIME_OUT_CONFIG
             <BufferEmptySleepTime>1000</BufferEmptySleepTime>   BUFFER_EMPTY_SLEEP_TIME_CONFIG, in milliseconds
             <NoNodesSleepTime>5000</NoNodesSleepTime>   NO_NODES_SLEEP_TIME_CONFIG, in milliseconds
             <Username>transport_client_user</Username>  USERNAME_CONFIG
@@ -79,7 +79,7 @@ public class ElasticObserverConstants {
     public static final int DEFAULT_BUFFER_SIZE = 5000;
 
     // Size of the event bulk published at one request
-    public static final int DEFAULT_PUBLISHING_BULK_SIZE = 500; // TODO: 11/19/17 to be decided
+    public static final int DEFAULT_PUBLISHING_BULK_SIZE = 500; // TODO: 11/19/17 size to be decided
 
     // Time out for collecting the fixed size bulk (in milliseconds)
     public static final long DEFAULT_BULK_COLLECTING_TIMEOUT = 5000;
