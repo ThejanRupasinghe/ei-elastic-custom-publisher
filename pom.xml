@@ -61,7 +61,8 @@
                             org.wso2.carbon.base.*,
                             org.apache.synapse.aspects.flow.statistics.publishing.*,
                             org.wso2.carbon.das.data.publisher.util.*,
-                            com.fasterxml.jackson.databind.*
+                            com.fasterxml.jackson.databind.*,
+                            org.apache.axiom.om.*
                         </Import-Package>
                     </instructions>
                 </configuration>

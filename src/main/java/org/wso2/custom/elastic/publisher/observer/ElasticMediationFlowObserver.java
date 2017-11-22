@@ -18,6 +18,8 @@
 
 package org.wso2.custom.elastic.publisher.observer;
 
+import org.apache.axiom.om.OMNode;
+import org.apache.axiom.om.xpath.AXIOMXPath;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -42,6 +44,7 @@ import org.w3c.dom.Element;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.List;
 
 /**
  * This class is instantiated by MediationStatisticsComponent.
@@ -281,6 +284,13 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
             if (!bufferExceeded) {
                 try {
                     if (!(publisherThread.getShutdown())) {
+
+                        Element element = ServerConfiguration.getInstance().getDocumentElement();
+                        AXIOMXPath axiomxPath = new AXIOMXPath("/Server/MediationFlowStatisticConfig/ElasticObserver/Password"); //Construct the XPath expression from a given string.
+                        List list = axiomxPath.selectNodes(element);
+
+                        OMNode node = (OMNode) axiomxPath.selectSingleNode(element);
+
                         ElasticStatisticsPublisher.process(publishingFlow);
                     }
                 } catch (Exception e) {
