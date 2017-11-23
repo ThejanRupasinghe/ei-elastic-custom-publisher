@@ -5,7 +5,7 @@ This uses the [interface](https://docs.wso2.com/display/EI611/Customizing+Statis
 <b>This applies to EI 6.1.1 and above. For EI 6.1.1 please take the latest WUM update before adding this.</b> 
 
 ## Building and Adding to EI
-* Get a clone or download source from [github].(https://github.com/ThejanRupasinghe/ei-elastic-custom-publisher)
+* Get a clone or download source from [github](https://github.com/ThejanRupasinghe/ei-elastic-custom-publisher).
 * Run the Maven command ```mvn clean install``` in the cloned directory.
 * Copy the “org.wso2.custom.elastic.publisher_1.0.jar” in the “target” directory to the “dropins” directory of EI installation.
 
