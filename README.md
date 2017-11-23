@@ -48,7 +48,7 @@ This uses the [interface](https://docs.wso2.com/display/EI611/Customizing+Statis
 ```<Password>```  :  Password given to the user  
 ```<SslKey>```   :  Absolute path to the SSL key file of the client  
 ```<SslCertificate>``` :  Absolute path to the SSL certificate file of the client  
-```<SslCa>```  :  Configures Transport Client in observer to trust any certificates signed by the specified CA, which is used to sign Elasticsearch node certificates.  
+```<SslCa>```  :  Absolute path to the CA certificate. Configures Transport Client in observer to trust any certificates signed by the specified CA, which is used to sign Elasticsearch node certificates.  
 
 * Enable statistics for services as in the [documentation](https://docs.wso2.com/display/EI611/Prerequisites+to+Publish+Statistics).
 * Restart WSO2 EI and watch for the log line “Elasticsearch mediation statistic publishing enabled” and verify that the mediation flow observer is running.
