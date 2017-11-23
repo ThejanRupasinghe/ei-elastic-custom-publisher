@@ -21,7 +21,11 @@ This uses the [interface](https://docs.wso2.com/display/EI611/Customizing+Statis
         <Host>localhost</Host>
         <Port>9300</Port>
         <ClusterName>elasticsearch</ClusterName>
-        <QueueSize>5000</QueueSize>
+        <BufferSize>5000</BufferSize>
+        <BulkSize>500</BulkSize>
+        <BulkCollectingTimeOut>5000</BulkCollectingTimeOut>
+        <BufferEmptySleepTime>1000</BufferEmptySleepTime>
+        <NoNodesSleepTime>5000</NoNodesSleepTime>
         <Username>transport_client_user</Username>
         <Password>changeme</Password>
         <SslKey>/path/to/client.key</SslKey>
@@ -37,7 +41,7 @@ This uses the [interface](https://docs.wso2.com/display/EI611/Customizing+Statis
 ```<BufferSize>5000</BufferSize>``` : Size of the buffering queue which keeps the statistic events in the custom observer.  Program will drop the incoming events after the maximum buffer size is reached.  
 ```<BulkSize>500</BulkSize>``` : Size of the events bulk, that the client will publish at a time.  
 ```<BulkCollectingTimeOut>5000</BulkCollectingTimeOut>``` : This is the timeout value for collecting the events for the bulk from the buffer (in milliseconds).
-```<BufferEmptySleepTime>1000</BufferEmptySleepTime>``` : This is the sleep time for the publisher thread when the buffer is empty (in milliseconds).  
+```<BufferEmptySleepTime>1000</BufferEmptySleepTime>``` : This is the sleep time for the publisher thread when the buffer is empty (in milliseconds).    
 ```<NoNodesSleepTime>5000</NoNodesSleepTime>``` : This is the sleep time for the publisher thread when there is no Elasticsearch nodes connected to the client.
 #### Provide following configurations additionally for X-Pack secured Elasticsearch cluster
 ```<Username>```  :  Username of the created user with access privileges   
