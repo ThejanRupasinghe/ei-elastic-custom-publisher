@@ -96,4 +96,19 @@ public class ElasticObserverConstants {
     public static final String API = "API";
     public static final String PROXY_SERVICE = "Proxy Service";
     public static final String INBOUND_ENDPOINT = "Inbound EndPoint";
+
+    // Keys for the configurations object in ElasticMediationFlowObserver getConfigurations()
+    public static final String HOST = "host";
+    public static final String CLUSTER_NAME = "clusterName";
+    public static final String PORT = "port";
+    public static final String BUFFER_SIZE = "bufferSize";
+    public static final String BULK_SIZE = "bulkSize";
+    public static final String BULK_TIME_OUT = "bulkTimeOut";
+    public static final String BUFFER_EMPTY_SLEEP = "bufferEmptySleep";
+    public static final String NO_NODES_SLEEP = "noNodesSleep";
+    public static final String USERNAME = "username";
+    public static final String PASSWORD = "password";
+    public static final String SSL_KEY = "sslKey";
+    public static final String SSL_CERT = "sslCert";
+    public static final String SSL_CA = "sslCa";
 }
