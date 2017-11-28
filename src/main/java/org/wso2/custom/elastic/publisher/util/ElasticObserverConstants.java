@@ -79,7 +79,7 @@ public class ElasticObserverConstants {
     public static final int DEFAULT_BUFFER_SIZE = 5000;
 
     // Size of the event bulk published at one request
-    public static final int DEFAULT_PUBLISHING_BULK_SIZE = 500; // TODO: 11/19/17 size to be decided
+    public static final int DEFAULT_PUBLISHING_BULK_SIZE = 500;
 
     // Time out for collecting the fixed size bulk (in milliseconds)
     public static final long DEFAULT_BULK_COLLECTING_TIMEOUT = 5000;
