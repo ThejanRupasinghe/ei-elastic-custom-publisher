@@ -1,4 +1,5 @@
-# WSO2 EI Custom Mediation Flow Observer for Elasticsearch
+# WSO2 EI Custom Mediation Flow Observer for Elasticsearch ![Build Status](https://travis-ci.org/ThejanRupasinghe/ei-elastic-custom-publisher.svg?branch=master)
+
 This is an implementation of a custom mediation flow observer for [WSO2 Enterprise Integrator](https://wso2.com/integration#download) which publishes flow statistics to [Elasticsearch](https://www.elastic.co/products/elasticsearch).
 This uses the [interface](https://docs.wso2.com/display/EI611/Customizing+Statistics+Publishing) exposed by the existing EI Analytics profile.
 
