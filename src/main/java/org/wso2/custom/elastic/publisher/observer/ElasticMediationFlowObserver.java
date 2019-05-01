@@ -24,7 +24,8 @@ import org.apache.commons.logging.LogFactory;
 import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
+//import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.xpack.client.PreBuiltXPackTransportClient;
 
@@ -122,7 +123,8 @@ public class ElasticMediationFlowObserver implements MessageFlowObserver {
                 log.debug("Transport Client is built.");
             }
 
-            client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
+            //client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
+            client.addTransportAddress(new TransportAddress(InetAddress.getByName(host), port));
 
             if (log.isDebugEnabled()) {
                 log.debug("Host & Port added to the client.");

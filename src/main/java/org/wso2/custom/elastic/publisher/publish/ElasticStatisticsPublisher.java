@@ -91,7 +91,7 @@ public class ElasticStatisticsPublisher {
                     mapping.put("flowid", flowid);
                     mapping.put("host", host);
                     mapping.put("@timestamp", getFormattedDate(event.getStartTime()));
-
+                    
                     // If there is a fault count, the event is not success
                     if (event.getFaultCount() > 0) {
                         mapping.put("success", false);
@@ -126,7 +126,8 @@ public class ElasticStatisticsPublisher {
             BulkResponse response = bulkRequest.get();
 
             if (log.isDebugEnabled()) {
-                log.debug("Bulk Request took " + response.getTookInMillis() + " milliseconds");
+                //log.debug("Bulk Request took " + response.getTookInMillis() + " milliseconds");
+                log.debug("Bulk Request took " + response.getTook().getMillis() + " milliseconds");
             }
         } catch (NoNodeAvailableException e) {
             log.error("No available Elasticsearch Nodes to connect. Please give correct configurations and" +
