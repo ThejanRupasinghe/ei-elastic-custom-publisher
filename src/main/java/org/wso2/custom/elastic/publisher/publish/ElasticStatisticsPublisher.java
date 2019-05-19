@@ -70,39 +70,45 @@ public class ElasticStatisticsPublisher {
         for (PublishingEvent event : events) {
             String componentType = event.getComponentType();
             String componentName = event.getComponentName();
-
-            // Checks each event for one of these five services
-            if (componentType.equals(ElasticObserverConstants.SEQUENCE) ||
-                    componentType.equals(ElasticObserverConstants.ENDPOINT) ||
-                    componentType.equals(ElasticObserverConstants.API) ||
-                    componentType.equals(ElasticObserverConstants.PROXY_SERVICE) ||
-                    componentType.equals(ElasticObserverConstants.INBOUND_ENDPOINT)) {
-
-                // Map to store details of the event
-                Map<String, Object> mapping = new HashMap<>();
-
-                // Ignore events with theses ComponentNames
-                if (!(componentName.equals("API_INSEQ") || componentName.equals("API_OUTSEQ") ||
-                        componentName.equals("PROXY_INSEQ") || componentName.equals("PROXY_OUTSEQ") ||
-                        componentName.equals("AnonymousEndpoint"))) {
-
-                    mapping.put("type", componentType);
-                    mapping.put("name", componentName);
-                    mapping.put("flowid", flowid);
-                    mapping.put("host", host);
-                    mapping.put("@timestamp", getFormattedDate(event.getStartTime()));
-                    
-                    // If there is a fault count, the event is not success
-                    if (event.getFaultCount() > 0) {
-                        mapping.put("success", false);
-                    } else {
-                        mapping.put("success", true);
-                    }
-
-                    // Enqueue the Map to the queue
-                    allMappingsQueue.add(mapping);
-                }
-            }
+            //Integer componentIndex = event.getComponentIndex();
+            String componentId = event.getComponentId();
+            long startTime = event.getStartTime();
+            long endTime = event.getEndTime();
+            long duration = event.getDuration();
+            String beforePayload = event.getBeforePayload();
+            String afterPayload = event.getAfterPayload();
+            Map contextPropertyMap = event.getContextPropertyMap();
+            Map transportPropertyMap = event.getTransportPropertyMap();
+            String entryPoint = event.getEntryPoint();
+            Integer entryPointHashcode = event.getEntryPointHashcode();
+            Integer[] children = event.getChildren();
+            Integer hashCode = event.getHashCode();
+            int faultCount = event.getFaultCount();
+            
+            
+            // Map to store details of the event
+            Map<String, Object> mapping = new HashMap<>();
+            mapping.put("flowid", flowid);
+            mapping.put("host", host);
+            mapping.put("type", componentType);
+            mapping.put("name", componentName);
+            //mapping.put("componentIndex", componentIndex);
+            mapping.put("componentId", componentId);
+            mapping.put("startTime", getFormattedDate(startTime));
+            mapping.put("endTime", getFormattedDate(endTime));
+            mapping.put("duration", duration);
+            mapping.put("beforePayload", beforePayload);
+            mapping.put("afterPayload", afterPayload);
+            mapping.put("contextPropertyMap", contextPropertyMap);
+            mapping.put("transportPropertyMap", transportPropertyMap);
+            mapping.put("entryPoint", entryPoint);
+            mapping.put("entryPointHashcode", entryPointHashcode);
+            mapping.put("children", children);
+            mapping.put("hashCode", hashCode);
+            mapping.put("faultCount", faultCount);
+            
+	        // Enqueue the Map to the queue
+	        allMappingsQueue.add(mapping);
         }
     }
 
