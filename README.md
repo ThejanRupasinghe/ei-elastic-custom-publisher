@@ -5,6 +5,8 @@ This uses the [interface](https://docs.wso2.com/display/EI611/Customizing+Statis
 
 <b>This applies to EI 6.1.1 and above. For EI 6.1.1 please take the latest WUM update before adding this.</b> 
 
+Please refer to https://wso2.com/library/article/2017/12/monitoring-wso2-enterprise-integrator-logs-and-statistics-with-elastic-stack-elk-stack/ for an extensive documentation.
+
 ## Building and Adding to EI
 * Get a clone or download source from [github](https://github.com/ThejanRupasinghe/ei-elastic-custom-publisher).
 * Run the Maven command ```mvn clean install``` in the cloned directory.
