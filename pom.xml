@@ -126,7 +126,7 @@
         <elasticsearch.version>6.6.1</elasticsearch.version>
         <log4j.version>1.1.1</log4j.version>
         <fasterxml.jackson.version>2.6.1.wso2v1</fasterxml.jackson.version>
-        <junit.version>4.11</junit.version>
+        <junit.version>4.13.1</junit.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
